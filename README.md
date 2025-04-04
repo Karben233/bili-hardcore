@@ -1,6 +1,6 @@
 # Bili-Hardcore
 
-一个基于 Python 开发的B站自动答题工具，利用 Gemini API 实现智能答题功能。
+一个基于 Python 开发的B站硬核会员自动答题工具，利用 Gemini API 实现智能答题功能。
 
 ## 安装说明
 
