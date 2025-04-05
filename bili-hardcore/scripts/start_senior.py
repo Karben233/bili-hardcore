@@ -1,6 +1,7 @@
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit
 from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
+from time import sleep
 
 class QuizSession:
     def __init__(self):
@@ -35,6 +36,7 @@ class QuizSession:
                 if not self.submit_answer(result):
                     logger.error("提交答案失败")
                     return
+                sleep(1)
         except KeyboardInterrupt:
             logger.info("答题会话已终止")
         except Exception as e:
