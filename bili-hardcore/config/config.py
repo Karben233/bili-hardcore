@@ -1,7 +1,45 @@
 import os
 
 # GEMINI
-API_KEY_GEMINI=''# 填写自己的GEMINI API KEY
+import json
+
+def load_gemini_key():
+    """从用户目录加载GEMINI API密钥
+    
+    Returns:
+        str: API密钥
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'gemini_key.json')
+    if os.path.exists(key_file):
+        try:
+            with open(key_file, 'r') as f:
+                data = json.load(f)
+                return data.get('api_key', '')
+        except Exception as e:
+            print(f'读取GEMINI API密钥失败: {str(e)}')
+    return ''
+
+def save_gemini_key(api_key):
+    """保存GEMINI API密钥到用户目录
+    
+    Args:
+        api_key (str): API密钥
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'gemini_key.json')
+    try:
+        os.makedirs(os.path.dirname(key_file), exist_ok=True)
+        with open(key_file, 'w') as f:
+            json.dump({'api_key': api_key}, f)
+        print('GEMINI API密钥已保存')
+    except Exception as e:
+        print(f'保存GEMINI API密钥失败: {str(e)}')
+
+# 从用户目录加载API密钥，如果不存在则提示用户输入
+API_KEY_GEMINI = load_gemini_key()
+if not API_KEY_GEMINI:
+    API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
+    if API_KEY_GEMINI:
+        save_gemini_key(API_KEY_GEMINI)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
