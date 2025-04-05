@@ -6,10 +6,6 @@ API_KEY_GEMINI=''# 填写自己的GEMINI API KEY
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 缓存目录
-DATA_DIR = os.path.join(os.path.dirname(BASE_DIR), 'data')
-os.makedirs(DATA_DIR, exist_ok=True)
-
 # 日志目录
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -33,7 +29,7 @@ HEADERS = {
 }
 
 # 认证文件路径
-AUTH_FILE = os.path.join(os.path.dirname(BASE_DIR), 'data', 'auth.json')
+AUTH_FILE = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'auth.json')
 
 PROMPT = '''
 你是一个全知全能的答题专家，现在我要问你一个问题，答案一共有四个选项，请告诉我第几个答案是正确的。比如：

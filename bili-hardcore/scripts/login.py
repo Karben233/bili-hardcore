@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from time import sleep
 from tools.bili_ticket import getTicket
 from client.login import qrcode_get, qrcode_poll
@@ -18,6 +19,13 @@ def load_auth_data():
     """
     if os.path.exists(AUTH_FILE):
         try:
+            # 检查文件最后修改时间是否超过7天
+            file_mtime = os.path.getmtime(AUTH_FILE)
+            current_time = time.time()
+            if (current_time - file_mtime) > 7 * 24 * 3600:  # 7天的秒数
+                logger.info('认证信息已过期（超过7天），需要重新登录')
+                return False
+                
             with open(AUTH_FILE, 'r') as f:
                 auth_data = json.load(f)
                 if all(key in auth_data for key in ['access_token', 'csrf', 'mid', 'cookie']):
