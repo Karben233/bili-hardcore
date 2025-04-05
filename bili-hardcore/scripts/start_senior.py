@@ -81,7 +81,7 @@ class QuizSession:
             for cat in category.get('categories', []):
                 logger.info(f"ID: {cat.get('id')} - {cat.get('name')}")
             ids = input('请输入分类ID: ')
-
+            logger.info("tips: 输入多个分类ID请用 *英文逗号* 隔开,例如:1,2,3")
             logger.info("获取验证码...")
             captcha_res = captcha_get()
             logger.info("请打开链接查看验证码内容:{}".format(captcha_res.get('url')))
