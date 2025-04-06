@@ -36,7 +36,6 @@ class QuizSession:
                 if not self.submit_answer(result):
                     logger.error("提交答案失败")
                     return
-                sleep(1)
         except KeyboardInterrupt:
             logger.info("答题会话已终止")
         except Exception as e:
@@ -135,6 +134,7 @@ class QuizSession:
             )
             if result and result.get('code') == 0:
                 logger.info("答案提交成功")
+                sleep(1)
                 return True
             else:
                 logger.error(f"答案提交失败: {result}")
