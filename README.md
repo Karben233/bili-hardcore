@@ -34,7 +34,8 @@ python bili-hardcore/main.py
 5. 程序会自动开始答题流程
 
 ## 注意事项
-- 使用前请确保已配置正确的 Gemini API Key，没有 Gemini API Key 的可以自己去申请一个，免费的
+- 使用前请确保已配置正确的 Gemini API Key，没有 Gemini API Key 的可以自己去免费申请一个
 - 程序仅调用 B 站接口和 Gemini API，不会上传任何个人信息
 - 首次输入 API Key 和登录后，会将信息保存到 `~/.bili-hardcore`，下次运行时会自动读取。如遇到奇怪问题，请先清空此文件夹重新运行软件
+- 注意需要切换至 Gemini 允许的地区运行，否则会被 Gemini API 拦截
 - 请合理使用，遵守 B 站相关规则
