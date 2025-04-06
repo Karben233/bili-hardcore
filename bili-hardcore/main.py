@@ -5,3 +5,4 @@ from scripts.check import check
 check()
 auth()
 start()
+input("按回车键退出...")
