@@ -3,6 +3,11 @@ import os
 # API Keys
 import json
 
+# OpenAI默认配置
+BASE_URL_OPENAI = ''
+MODEL_OPENAI = ''
+API_KEY_OPENAI = ''
+
 def load_api_key(key_type):
     """从用户目录加载API密钥
     
@@ -58,11 +63,49 @@ def load_gemini_key():
 def save_gemini_key(api_key):
     save_api_key('gemini', api_key)
 
+def save_openai_config(base_url, model, api_key):
+    """保存OpenAI配置到用户目录
+    
+    Args:
+        base_url (str): OpenAI API基础URL
+        model (str): 模型名称
+        api_key (str): API密钥
+    """
+    config_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'openai_config.json')
+    try:
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+        with open(config_file, 'w') as f:
+            json.dump({
+                'base_url': base_url,
+                'model': model,
+                'api_key': api_key
+            }, f)
+        print('OpenAI配置已保存')
+    except Exception as e:
+        print(f'保存OpenAI配置失败: {str(e)}')
+
+def load_openai_config():
+    """从用户目录加载OpenAI配置
+    
+    Returns:
+        tuple: (base_url, model, api_key)
+    """
+    config_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'openai_config.json')
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                data = json.load(f)
+                return data.get('base_url', ''), data.get('model', ''), data.get('api_key', '')
+        except Exception as e:
+            print(f'读取OpenAI配置失败: {str(e)}')
+    return '', '', ''
+
 # 选择使用的LLM模型
 print("请选择使用的LLM模型：")
 print("1. DeepSeek")
 print("2. Gemini")
-model_choice = input("请输入数字(1或2): ").strip()
+print("3. OpenAI 格式的 API（火山引擎、硅基流动等）")
+model_choice = input("请输入数字(1,2,3): ").strip()
 
 API_KEY_GEMINI = ''
 API_KEY_DEEPSEEK = ''
@@ -80,6 +123,17 @@ elif model_choice == '1':
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
         if API_KEY_DEEPSEEK:
             save_api_key('deepseek', API_KEY_DEEPSEEK)
+            
+elif model_choice == '3':
+    BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
+    if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+        BASE_URL_OPENAI = input('请输入API基础URL (例如: https://api.openai.com/v1): ').strip()
+        if BASE_URL_OPENAI.endswith('/'):
+            BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
+        MODEL_OPENAI = input('请输入模型名称 (例如: gpt-3.5-turbo): ').strip()
+        API_KEY_OPENAI = input('请输入API密钥: ').strip()
+        if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+            save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
 else:
     print("无效的选择，默认使用deepseek")
     API_KEY_DEEPSEEK = load_api_key('deepseek')

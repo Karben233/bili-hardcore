@@ -9,7 +9,7 @@ class GeminiAPI:
         self.model = "gemini-2.0-flash"
         self.api_key = API_KEY_GEMINI
 
-    def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:
+    def ask(self, question: str, timeout: Optional[int] = 10) -> Dict[str, Any]:
         url = f"{self.base_url}/models/{self.model}:generateContent"
         
         headers = {

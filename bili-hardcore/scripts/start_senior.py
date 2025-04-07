@@ -2,6 +2,8 @@ from client.senior import captcha_get, captcha_submit, category_get, question_ge
 from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
 from tools.LLM.deepseek import DeepSeekAPI
+from tools.LLM.openai import OpenAIAPI
+
 from config.config import model_choice
 from time import sleep
 
@@ -27,6 +29,8 @@ class QuizSession:
                     llm = DeepSeekAPI()
                 elif model_choice == '2':
                     llm = GeminiAPI()
+                elif model_choice == '3':
+                    llm = OpenAIAPI()
                 else:
                     llm = DeepSeekAPI()
                 answer = llm.ask(self.get_question_prompt())
