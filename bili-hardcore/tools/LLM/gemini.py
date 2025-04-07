@@ -1,6 +1,7 @@
 import requests
 from typing import Dict, Any, Optional
 from config.config import PROMPT,API_KEY_GEMINI
+from time import time
 
 class GeminiAPI:
     def __init__(self):
@@ -20,7 +21,7 @@ class GeminiAPI:
                 {
                     "parts": [
                         {
-                            "text": PROMPT.format(question)
+                            "text": PROMPT.format(time(), question)
                         }
                     ]
                 }
