@@ -1,7 +1,8 @@
 import requests
 from typing import Dict, Any, Optional
 from config.config import PROMPT,API_KEY_GEMINI
-from time import time
+from time import time,sleep
+
 
 class GeminiAPI:
     def __init__(self):
@@ -33,6 +34,7 @@ class GeminiAPI:
         }
 
         try:
+            sleep(5)
             response = requests.post(
                 url,
                 headers=headers,
