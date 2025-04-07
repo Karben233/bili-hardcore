@@ -70,6 +70,7 @@ def auth():
         qrcode_data = qrcode_get()
         url = qrcode_data.get('url')
         
+        
         # 创建QRCode实例
         qr = QRCode(
             version=1,
@@ -85,7 +86,7 @@ def auth():
         # 打印二维码
         qr.print_ascii()
         logger.info('请使用哔哩哔哩APP扫描二维码登录')
-
+        logger.info(f"如果二维码不能正常显示，请使用 https://cli.im/ 手动生成此链接的二维码进行扫码：{url}")
         # 轮询二维码状态
         auth_code = qrcode_data.get('auth_code')
         retry_count = 0
