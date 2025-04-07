@@ -70,6 +70,7 @@ HEADERS = {
 AUTH_FILE = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'auth.json')
 
 PROMPT = '''
+当前时间：{}
 你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：
 问题：大的反义词是什么？
 选项：['长', '宽', '小', '热']

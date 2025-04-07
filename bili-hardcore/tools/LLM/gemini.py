@@ -20,7 +20,7 @@ class GeminiAPI:
                 {
                     "parts": [
                         {
-                            "text": PROMPT.format(question)
+                            "text": PROMPT.format(time(), question)
                         }
                     ]
                 }
