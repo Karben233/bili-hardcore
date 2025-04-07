@@ -1,6 +1,7 @@
 # Bili-Hardcore
 
 B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
+
 **可用的模型：**
 - DeepSeek (V3)
 - Gemini (gemini-2.0-flash)(为了防止风控，答题间隔5秒，速度较慢，建议使用其他模型)
