@@ -4,6 +4,7 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 **可用的模型：**
 - DeepSeek (V3)
 - Gemini (gemini-2.0-flash)(免费版可能会触发 Gemini 风控，导致无法答题)
+- OpenAI 风格的其他 API（火山引擎、硅基流动等）
 
 ## 使用说明
 
