@@ -41,13 +41,33 @@ def load_base_url(key_type):
             print(f'读取{key_type.upper()} API base_url失败: {str(e)}')
     return ''
 
-def save_api_key(key_type, api_key, base_url=''):
-    """保存API密钥和base_url到用户目录
+def load_model_name(key_type):
+    """从用户目录加载API model_name
+    
+    Args:
+        key_type (str): API类型 (gemini 或 deepseek)
+    
+    Returns:
+        str: API model_name
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
+    if os.path.exists(key_file):
+        try:
+            with open(key_file, 'r') as f:
+                data = json.load(f)
+                return data.get('model_name', '')
+        except Exception as e:
+            print(f'读取{key_type.upper()} API model_name失败: {str(e)}')
+    return ''
+
+def save_api_key(key_type, api_key, base_url='', model_name=''):
+    """保存API密钥、base_url和model_name到用户目录
     
     Args:
         key_type (str): API类型 (gemini 或 deepseek)
         api_key (str): API密钥
         base_url (str, optional): API基础URL，默认为空
+        model_name (str, optional): API模型名称，默认为空
     """
     key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
     try:
@@ -55,6 +75,8 @@ def save_api_key(key_type, api_key, base_url=''):
         data = {'api_key': api_key}
         if base_url:
             data['base_url'] = base_url
+        if model_name:
+            data['model_name'] = model_name
         with open(key_file, 'w') as f:
             json.dump(data, f)
         print(f'{key_type.upper()} API信息已保存')
@@ -71,36 +93,47 @@ API_KEY_GEMINI = ''
 API_KEY_DEEPSEEK = ''
 BASE_URL_GEMINI = ''
 BASE_URL_DEEPSEEK = ''
+MODEL_NAME_GEMINI = ''
+MODEL_NAME_DEEPSEEK = ''
 
 if model_choice == '2':
     API_KEY_GEMINI = load_api_key('gemini')
     BASE_URL_GEMINI = load_base_url('gemini') or "https://generativelanguage.googleapis.com/v1beta"
+    MODEL_NAME_GEMINI = load_model_name('gemini') or "gemini-2.0-flash"
     if not API_KEY_GEMINI:
         API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
         if API_KEY_GEMINI:
             base_url_input = input('请输入GEMINI API基础URL(可选，直接回车使用默认值): ').strip()
             BASE_URL_GEMINI = base_url_input or BASE_URL_GEMINI
-            save_api_key('gemini', API_KEY_GEMINI, BASE_URL_GEMINI)
+            model_name_input = input('请输入GEMINI 模型名称(可选，直接回车使用默认值: gemini-2.0-flash): ').strip()
+            MODEL_NAME_GEMINI = model_name_input or MODEL_NAME_GEMINI
+            save_api_key('gemini', API_KEY_GEMINI, BASE_URL_GEMINI, MODEL_NAME_GEMINI)
 
 elif model_choice == '1':
     API_KEY_DEEPSEEK = load_api_key('deepseek')
     BASE_URL_DEEPSEEK = load_base_url('deepseek') or "https://api.deepseek.com/v1"
+    MODEL_NAME_DEEPSEEK = load_model_name('deepseek') or "deepseek-chat"
     if not API_KEY_DEEPSEEK:
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
         if API_KEY_DEEPSEEK:
             base_url_input = input('请输入DEEPSEEK API基础URL(可选，直接回车使用默认值): ').strip()
             BASE_URL_DEEPSEEK = base_url_input or BASE_URL_DEEPSEEK
-            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK)
+            model_name_input = input('请输入DEEPSEEK 模型名称(可选，直接回车使用默认值: deepseek-chat): ').strip()
+            MODEL_NAME_DEEPSEEK = model_name_input or MODEL_NAME_DEEPSEEK
+            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK, MODEL_NAME_DEEPSEEK)
 else:
     print("无效的选择，默认使用deepseek")
     API_KEY_DEEPSEEK = load_api_key('deepseek')
     BASE_URL_DEEPSEEK = load_base_url('deepseek') or "https://api.deepseek.com/v1"
+    MODEL_NAME_DEEPSEEK = load_model_name('deepseek') or "deepseek-chat"
     if not API_KEY_DEEPSEEK:
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥:').strip()
         if API_KEY_DEEPSEEK:
             base_url_input = input('请输入DEEPSEEK API基础URL(可选，直接回车使用默认值): ').strip()
             BASE_URL_DEEPSEEK = base_url_input or BASE_URL_DEEPSEEK
-            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK)
+            model_name_input = input('请输入DEEPSEEK 模型名称(可选，直接回车使用默认值: deepseek-chat): ').strip()
+            MODEL_NAME_DEEPSEEK = model_name_input or MODEL_NAME_DEEPSEEK
+            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK, MODEL_NAME_DEEPSEEK)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

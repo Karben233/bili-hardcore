@@ -1,16 +1,16 @@
 import requests
 from typing import Dict, Any, Optional
-from config.config import PROMPT, API_KEY_GEMINI, BASE_URL_GEMINI
+from config.config import PROMPT, API_KEY_GEMINI, BASE_URL_GEMINI, MODEL_NAME_GEMINI
 from time import time
 
 class GeminiAPI:
     def __init__(self):
-        self.base_url = BASE_URL_GEMINI if BASE_URL_GEMINI else "https://generativelanguage.googleapis.com/v1beta"
-        self.model = "gemini-2.0-flash"
+        self.base_url = BASE_URL_GEMINI if BASE_URL_GEMINI else "https://generativelanguage.googleapis.com"
+        self.model = MODEL_NAME_GEMINI if MODEL_NAME_GEMINI else "gemini-2.0-flash"
         self.api_key = API_KEY_GEMINI
 
     def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:
-        url = f"{self.base_url}/models/{self.model}:generateContent"
+        url = f"{self.base_url}/v1beta/models/{self.model}:generateContent"
         
         headers = {
             "Content-Type": "application/json"
