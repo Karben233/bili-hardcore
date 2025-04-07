@@ -3,8 +3,8 @@
 B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 **可用的模型：**
 - DeepSeek (V3)
-- Gemini (gemini-2.0-flash)(免费版可能会触发 Gemini 风控，导致无法答题)
-- OpenAI 风格的其他 API（火山引擎、硅基流动等）
+- Gemini (gemini-2.0-flash)(为了防止风控，答题间隔5秒，速度较慢，建议使用其他模型)
+- OpenAI 风格的其他 API（OpenAI、火山引擎、硅基流动等，可自定义 url、模型名称）
 
 ## 使用说明
 
@@ -57,7 +57,7 @@ python bili-hardcore/main.py
 2. 开始答题直接之后软件直接退出：需要切换到大陆及香港以外的节点进行答题
 
 ## 注意事项
-- 使用前请确保已配置正确的 API Key，没有 API Key 的可以自己去免费申请一个 Gemini，或者 DeepSeek 充值一元
+- 使用前请确保已配置正确的 API Key，没有 API Key 的可以自己去免费申请一个火山引擎或者 Gemini，或者 DeepSeek 充值一元
 - 程序仅调用 B 站接口和 LLM API，不会上传任何个人信息
 - 首次输入 API Key 和登录后，会将信息保存到 `~/.bili-hardcore`，下次运行时会自动读取。如遇到奇怪问题，请先清空此文件夹重新运行软件
 - 如果使用Gemini，注意需要切换至 Gemini 允许的地区运行，否则会被 Gemini API 拦截
