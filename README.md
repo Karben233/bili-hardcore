@@ -8,9 +8,14 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 
 ## 使用说明
 
-### 方式一：从 release 下载 exe 文件
-1. 下载 exe 文件
+### 方式一：从 release 下载可执行文件
+#### Windows
+1. 下载 `bili-hardcore.exe`
 2. 双击 exe 运行或在命令行中执行 `.\bili-hardcore.exe`
+
+#### Unix/Linux/Mac
+1. 下载 `bili-hardcore.sh`
+3. 在命令行中执行 `./bili-hardcore.sh`
 
 ### 方式二：从源码运行
 1. 克隆项目到本地
