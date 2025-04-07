@@ -60,33 +60,33 @@ def save_gemini_key(api_key):
 
 # 选择使用的LLM模型
 print("请选择使用的LLM模型：")
-print("1. Gemini")
-print("2. DeepSeek")
+print("1. DeepSeek")
+print("2. Gemini")
 model_choice = input("请输入数字(1或2): ").strip()
 
 API_KEY_GEMINI = ''
 API_KEY_DEEPSEEK = ''
 
-if model_choice == '1':
+if model_choice == '2':
     API_KEY_GEMINI = load_api_key('gemini')
     if not API_KEY_GEMINI:
         API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
         if API_KEY_GEMINI:
             save_api_key('gemini', API_KEY_GEMINI)
 
-elif model_choice == '2':
+elif model_choice == '1':
     API_KEY_DEEPSEEK = load_api_key('deepseek')
     if not API_KEY_DEEPSEEK:
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
         if API_KEY_DEEPSEEK:
             save_api_key('deepseek', API_KEY_DEEPSEEK)
 else:
-    print("无效的选择，默认使用Gemini")
-    API_KEY_GEMINI = load_api_key('gemini')
-    if not API_KEY_GEMINI:
-        API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
-        if API_KEY_GEMINI:
-            save_api_key('gemini', API_KEY_GEMINI)
+    print("无效的选择，默认使用deepseek")
+    API_KEY_DEEPSEEK = load_api_key('deepseek')
+    if not API_KEY_DEEPSEEK:
+        API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥:').strip()
+        if API_KEY_DEEPSEEK:
+            save_api_key('deepseek', API_KEY_DEEPSEEK)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

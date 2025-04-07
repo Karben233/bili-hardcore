@@ -24,6 +24,8 @@ class QuizSession:
                 self.display_question()
                 # 根据用户选择初始化对应的LLM模型
                 if model_choice == '1':
+                    llm = DeepSeekAPI()
+                elif model_choice == '2':
                     llm = GeminiAPI()
                 else:
                     llm = DeepSeekAPI()
