@@ -1,6 +1,8 @@
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit
 from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
+from tools.LLM.deepseek import DeepSeekAPI
+from config.config import model_choice
 from time import sleep
 
 class QuizSession:
@@ -20,7 +22,11 @@ class QuizSession:
                 
                 # 显示题目信息
                 self.display_question()
-                llm = GeminiAPI()
+                # 根据用户选择初始化对应的LLM模型
+                if model_choice == '1':
+                    llm = GeminiAPI()
+                else:
+                    llm = DeepSeekAPI()
                 answer = llm.ask(self.get_question_prompt())
                 logger.info('AI给出的答案:{}'.format(answer))
                 try:

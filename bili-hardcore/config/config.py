@@ -1,8 +1,44 @@
 import os
 
-# GEMINI
+# API Keys
 import json
 
+def load_api_key(key_type):
+    """从用户目录加载API密钥
+    
+    Args:
+        key_type (str): API类型 (gemini 或 deepseek)
+    
+    Returns:
+        str: API密钥
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
+    if os.path.exists(key_file):
+        try:
+            with open(key_file, 'r') as f:
+                data = json.load(f)
+                return data.get('api_key', '')
+        except Exception as e:
+            print(f'读取{key_type.upper()} API密钥失败: {str(e)}')
+    return ''
+
+def save_api_key(key_type, api_key):
+    """保存API密钥到用户目录
+    
+    Args:
+        key_type (str): API类型 (gemini 或 deepseek)
+        api_key (str): API密钥
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
+    try:
+        os.makedirs(os.path.dirname(key_file), exist_ok=True)
+        with open(key_file, 'w') as f:
+            json.dump({'api_key': api_key}, f)
+        print(f'{key_type.upper()} API密钥已保存')
+    except Exception as e:
+        print(f'保存{key_type.upper()} API密钥失败: {str(e)}')
+
+# 从用户目录加载API密钥，如果不存在则提示用户输入
 def load_gemini_key():
     """从用户目录加载GEMINI API密钥
     
@@ -20,26 +56,37 @@ def load_gemini_key():
     return ''
 
 def save_gemini_key(api_key):
-    """保存GEMINI API密钥到用户目录
-    
-    Args:
-        api_key (str): API密钥
-    """
-    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'gemini_key.json')
-    try:
-        os.makedirs(os.path.dirname(key_file), exist_ok=True)
-        with open(key_file, 'w') as f:
-            json.dump({'api_key': api_key}, f)
-        print('GEMINI API密钥已保存')
-    except Exception as e:
-        print(f'保存GEMINI API密钥失败: {str(e)}')
+    save_api_key('gemini', api_key)
 
-# 从用户目录加载API密钥，如果不存在则提示用户输入
-API_KEY_GEMINI = load_gemini_key()
-if not API_KEY_GEMINI:
-    API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
-    if API_KEY_GEMINI:
-        save_gemini_key(API_KEY_GEMINI)
+# 选择使用的LLM模型
+print("请选择使用的LLM模型：")
+print("1. Gemini")
+print("2. DeepSeek")
+model_choice = input("请输入数字(1或2): ").strip()
+
+API_KEY_GEMINI = ''
+API_KEY_DEEPSEEK = ''
+
+if model_choice == '1':
+    API_KEY_GEMINI = load_api_key('gemini')
+    if not API_KEY_GEMINI:
+        API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
+        if API_KEY_GEMINI:
+            save_api_key('gemini', API_KEY_GEMINI)
+
+elif model_choice == '2':
+    API_KEY_DEEPSEEK = load_api_key('deepseek')
+    if not API_KEY_DEEPSEEK:
+        API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
+        if API_KEY_DEEPSEEK:
+            save_api_key('deepseek', API_KEY_DEEPSEEK)
+else:
+    print("无效的选择，默认使用Gemini")
+    API_KEY_GEMINI = load_api_key('gemini')
+    if not API_KEY_GEMINI:
+        API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
+        if API_KEY_GEMINI:
+            save_api_key('gemini', API_KEY_GEMINI)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
