@@ -1,11 +1,11 @@
 import requests
 from typing import Dict, Any, Optional
-from config.config import PROMPT, API_KEY_DEEPSEEK
+from config.config import PROMPT, API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK
 from time import time
 
 class DeepSeekAPI:
     def __init__(self):
-        self.base_url = "https://api.deepseek.com/v1"
+        self.base_url = BASE_URL_DEEPSEEK if BASE_URL_DEEPSEEK else "https://api.deepseek.com/v1"
         self.model = "deepseek-chat"
         self.api_key = API_KEY_DEEPSEEK
 

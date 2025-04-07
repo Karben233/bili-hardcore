@@ -22,41 +22,44 @@ def load_api_key(key_type):
             print(f'读取{key_type.upper()} API密钥失败: {str(e)}')
     return ''
 
-def save_api_key(key_type, api_key):
-    """保存API密钥到用户目录
+def load_base_url(key_type):
+    """从用户目录加载API base_url
     
     Args:
         key_type (str): API类型 (gemini 或 deepseek)
-        api_key (str): API密钥
-    """
-    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
-    try:
-        os.makedirs(os.path.dirname(key_file), exist_ok=True)
-        with open(key_file, 'w') as f:
-            json.dump({'api_key': api_key}, f)
-        print(f'{key_type.upper()} API密钥已保存')
-    except Exception as e:
-        print(f'保存{key_type.upper()} API密钥失败: {str(e)}')
-
-# 从用户目录加载API密钥，如果不存在则提示用户输入
-def load_gemini_key():
-    """从用户目录加载GEMINI API密钥
     
     Returns:
-        str: API密钥
+        str: API base_url
     """
-    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'gemini_key.json')
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
     if os.path.exists(key_file):
         try:
             with open(key_file, 'r') as f:
                 data = json.load(f)
-                return data.get('api_key', '')
+                return data.get('base_url', '')
         except Exception as e:
-            print(f'读取GEMINI API密钥失败: {str(e)}')
+            print(f'读取{key_type.upper()} API base_url失败: {str(e)}')
     return ''
 
-def save_gemini_key(api_key):
-    save_api_key('gemini', api_key)
+def save_api_key(key_type, api_key, base_url=''):
+    """保存API密钥和base_url到用户目录
+    
+    Args:
+        key_type (str): API类型 (gemini 或 deepseek)
+        api_key (str): API密钥
+        base_url (str, optional): API基础URL，默认为空
+    """
+    key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
+    try:
+        os.makedirs(os.path.dirname(key_file), exist_ok=True)
+        data = {'api_key': api_key}
+        if base_url:
+            data['base_url'] = base_url
+        with open(key_file, 'w') as f:
+            json.dump(data, f)
+        print(f'{key_type.upper()} API信息已保存')
+    except Exception as e:
+        print(f'保存{key_type.upper()} API信息失败: {str(e)}')
 
 # 选择使用的LLM模型
 print("请选择使用的LLM模型：")
@@ -66,27 +69,38 @@ model_choice = input("请输入数字(1或2): ").strip()
 
 API_KEY_GEMINI = ''
 API_KEY_DEEPSEEK = ''
+BASE_URL_GEMINI = ''
+BASE_URL_DEEPSEEK = ''
 
 if model_choice == '2':
     API_KEY_GEMINI = load_api_key('gemini')
+    BASE_URL_GEMINI = load_base_url('gemini') or "https://generativelanguage.googleapis.com/v1beta"
     if not API_KEY_GEMINI:
         API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
         if API_KEY_GEMINI:
-            save_api_key('gemini', API_KEY_GEMINI)
+            base_url_input = input('请输入GEMINI API基础URL(可选，直接回车使用默认值): ').strip()
+            BASE_URL_GEMINI = base_url_input or BASE_URL_GEMINI
+            save_api_key('gemini', API_KEY_GEMINI, BASE_URL_GEMINI)
 
 elif model_choice == '1':
     API_KEY_DEEPSEEK = load_api_key('deepseek')
+    BASE_URL_DEEPSEEK = load_base_url('deepseek') or "https://api.deepseek.com/v1"
     if not API_KEY_DEEPSEEK:
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
         if API_KEY_DEEPSEEK:
-            save_api_key('deepseek', API_KEY_DEEPSEEK)
+            base_url_input = input('请输入DEEPSEEK API基础URL(可选，直接回车使用默认值): ').strip()
+            BASE_URL_DEEPSEEK = base_url_input or BASE_URL_DEEPSEEK
+            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK)
 else:
     print("无效的选择，默认使用deepseek")
     API_KEY_DEEPSEEK = load_api_key('deepseek')
+    BASE_URL_DEEPSEEK = load_base_url('deepseek') or "https://api.deepseek.com/v1"
     if not API_KEY_DEEPSEEK:
         API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥:').strip()
         if API_KEY_DEEPSEEK:
-            save_api_key('deepseek', API_KEY_DEEPSEEK)
+            base_url_input = input('请输入DEEPSEEK API基础URL(可选，直接回车使用默认值): ').strip()
+            BASE_URL_DEEPSEEK = base_url_input or BASE_URL_DEEPSEEK
+            save_api_key('deepseek', API_KEY_DEEPSEEK, BASE_URL_DEEPSEEK)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

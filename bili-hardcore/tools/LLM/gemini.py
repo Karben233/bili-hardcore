@@ -1,11 +1,11 @@
 import requests
 from typing import Dict, Any, Optional
-from config.config import PROMPT,API_KEY_GEMINI
+from config.config import PROMPT, API_KEY_GEMINI, BASE_URL_GEMINI
 from time import time
 
 class GeminiAPI:
     def __init__(self):
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        self.base_url = BASE_URL_GEMINI if BASE_URL_GEMINI else "https://generativelanguage.googleapis.com/v1beta"
         self.model = "gemini-2.0-flash"
         self.api_key = API_KEY_GEMINI
 
