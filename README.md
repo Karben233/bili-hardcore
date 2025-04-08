@@ -69,3 +69,7 @@ python bili-hardcore/main.py
 - 首次输入 API Key 和登录后，会将信息保存到 `~/.bili-hardcore`，下次运行时会自动读取。如遇到奇怪问题，请先清空此文件夹重新运行软件
 - 如果使用Gemini，注意需要切换至 Gemini 允许的地区运行，否则会被 Gemini API 拦截
 - 请合理使用，遵守 B 站相关规则
+
+## 运行截图
+![PixPin_2025-04-08_15-45-29](https://github.com/user-attachments/assets/70b3930c-c60f-43f7-8d82-c5225997ebc5)
+
