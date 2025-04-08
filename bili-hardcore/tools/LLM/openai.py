@@ -12,7 +12,7 @@ class OpenAIAPI:
         if not all([self.base_url, self.model, self.api_key]):
             raise ValueError("OpenAI配置不完整，请先配置BASE_URL_OPENAI、MODEL_OPENAI和API_KEY_OPENAI")
 
-    def ask(self, question: str, timeout: Optional[int] = 10) -> Dict[str, Any]:
+    def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:
         url = f"{self.base_url}/chat/completions"
         
         headers = {

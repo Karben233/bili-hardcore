@@ -9,7 +9,7 @@ class DeepSeekAPI:
         self.model = "deepseek-chat"
         self.api_key = API_KEY_DEEPSEEK
 
-    def ask(self, question: str, timeout: Optional[int] = 10) -> Dict[str, Any]:
+    def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:
         url = f"{self.base_url}/chat/completions"
         
         headers = {
