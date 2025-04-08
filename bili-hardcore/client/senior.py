@@ -95,3 +95,40 @@ def question_submit(id,ans_hash,ans_text):
         "statistics": "{\"appId\":1,\"platform\":3,\"version\":\"8.40.0\",\"abtest\":\"\"}",
         "web_location": "333.790",
     });
+
+def question_result():
+    '''
+    获取答题结果
+    这个接口不打算接入程序,答题结束之后,自己去app看就好了,app比较美观
+    '''
+    res = get('https://api.bilibili.com/x/senior/v1/answer/result', {
+        "access_key": access_token,
+        "csrf": csrf,
+        "disable_rcmd": "0",
+        "mobi_app": "android",
+        "platform": "android",
+        "statistics": "{\"appId\":1,\"platform\":3,\"version\":\"8.40.0\",\"abtest\":\"\"}",
+        "web_location": "333.790",
+    });
+    if res and res.get('code') == 0:
+        return res.get('data')
+        '''
+        {
+            "score": 28,// 总分数
+            // 分数详情
+            "scores": [
+            {
+                "category": "鬼畜",
+                "score": 13,
+                "total": 50
+            },
+            {
+                "category": "游戏",
+                "score": 15,
+                "total": 50
+            }
+            ]
+        }
+        '''
+    else:
+        raise Exception('答题结果获取失败{}'.format(res))
