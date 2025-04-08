@@ -99,7 +99,6 @@ def question_submit(id,ans_hash,ans_text):
 def question_result():
     '''
     获取答题结果
-    这个接口不打算接入程序,答题结束之后,自己去app看就好了,app比较美观
     '''
     res = get('https://api.bilibili.com/x/senior/v1/answer/result', {
         "access_key": access_token,

@@ -1,4 +1,4 @@
-from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit
+from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
 from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
 from tools.LLM.deepseek import DeepSeekAPI
@@ -160,4 +160,14 @@ quiz_session = QuizSession()
 def start():
     """启动答题程序"""
     quiz_session.start()
+    # 打印得分结果
+    try:
+        result = question_result()
+        if result:
+            logger.info(f"总分: {result.get('score')}")
+            logger.info("分类得分:")
+            for score in result.get('scores', []):
+                logger.info(f"{score.get('category')}: {score.get('score')}/{score.get('total')}")
+    except Exception as e:
+        logger.error(f"获取答题结果失败: {str(e)}")
     logger.info('答题结束')
