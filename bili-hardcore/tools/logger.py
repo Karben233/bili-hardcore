@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime
 
-def setup_logger(name='hardcore-freedom'):
+def setup_logger(name='bili-hardcore'):
     """设置日志系统
     
     Args:
