@@ -1,5 +1,5 @@
 import os
-
+from scripts.check_config import check
 # API Keys
 import json
 
@@ -100,6 +100,7 @@ def load_openai_config():
             print(f'读取OpenAI配置失败: {str(e)}')
     return '', '', ''
 
+check()
 # 选择使用的LLM模型
 print("请选择使用的LLM模型：")
 print("1. DeepSeek")

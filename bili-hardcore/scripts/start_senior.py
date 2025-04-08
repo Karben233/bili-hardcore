@@ -5,7 +5,7 @@ from tools.LLM.deepseek import DeepSeekAPI
 from tools.LLM.openai import OpenAIAPI
 
 from config.config import model_choice
-from time import sleep
+from scripts.check_config import clear_config
 
 class QuizSession:
     def __init__(self):
@@ -48,6 +48,7 @@ class QuizSession:
                 if not self.submit_answer(result):
                     logger.error("提交答案失败")
                     return
+            self.print_result()
         except KeyboardInterrupt:
             logger.info("答题会话已终止")
         except Exception as e:
@@ -154,27 +155,33 @@ class QuizSession:
             logger.error(f"提交答案时发生错误: {str(e)}")
             return False
 
+    def print_result(self):
+         # 打印得分结果
+        logger.info('==========答题结果==========')
+        try:
+            result = question_result()
+            if result:
+                score = result.get('score')
+                logger.info(f"总分: {score}")
+                logger.info("分类得分:")
+                for category_score in result.get('scores', []):
+                    logger.info(f"{category_score.get('category')}: {category_score.get('score')}/{category_score.get('total')}")
+                if score >= 60:
+                    logger.info('🎉🎉🎉恭喜您通过了答题🎉🎉🎉')
+                    choice = input('考虑到您的信息安全, 是否需要删除已保存的登录信息和API KEY?[1]是 [2]否: ')
+                    if choice == '1':
+                        clear_config()
+                else:
+                    logger.info('运气稍微有点差,您未能通过答题,请重新运行程序再次答题')
+                    logger.info('tips: 知识区和历史区的正确率会更高')
+                    input('按任意键退出')
+        except Exception as e:
+            logger.error(f"获取答题结果失败: {str(e)}")
+
 # 创建答题会话实例
 quiz_session = QuizSession()
 
 def start():
     """启动答题程序"""
     quiz_session.start()
-    # 打印得分结果
-    logger.info('==========答题结果==========')
-    try:
-        result = question_result()
-        if result:
-            score = result.get('score')
-            logger.info(f"总分: {score}")
-            logger.info("分类得分:")
-            for score in result.get('scores', []):
-                logger.info(f"{score.get('category')}: {score.get('score')}/{score.get('total')}")
-            if score >= 60:
-                logger.info('🎉🎉🎉恭喜您通过了答题🎉🎉🎉')
-            else:
-                logger.info('运气稍微有点差,您未能通过答题,请重新运行程序再次答题')
-                logger.info('tips: 知识区和历史区的正确率会更高')
-    except Exception as e:
-        logger.error(f"获取答题结果失败: {str(e)}")
     logger.info('答题结束')
