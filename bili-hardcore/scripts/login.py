@@ -106,7 +106,7 @@ def auth():
                     for cookie in cookies:
                         if cookie.get('name') == 'bili_jct':
                             auth_data.update({'csrf': cookie.get('value')})
-                            break;
+                            break
                     cookie_str = ';'.join([f"{cookie.get('name')}={cookie.get('value')}" for cookie in cookies])
                     auth_data.update({'cookie': cookie_str})
                     # 更新认证信息
