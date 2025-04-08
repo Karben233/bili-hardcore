@@ -15,9 +15,9 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 1. 下载 `bili-hardcore.exe`
 2. 双击 exe 运行或在命令行中执行 `.\bili-hardcore.exe`
 
-#### Unix/Linux/Mac
-1. 下载 `bili-hardcore.sh`
-3. 在命令行中执行 `./bili-hardcore.sh`
+#### ~~Unix/Linux/Mac~~ 我的电脑是 x86_64 Windows，打出来的包很多人用不了，建议通过源码运行
+~~1. 下载 `bili-hardcore.sh`~~
+~~2. 在命令行中执行 `./bili-hardcore.sh`~~
 
 ### 方式二：从源码运行
 请使用 Python 3.9 及以上版本运行
