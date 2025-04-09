@@ -1,7 +1,7 @@
 import requests
 from typing import Dict, Any, Optional
 from config.config import PROMPT, API_KEY_OPENAI, BASE_URL_OPENAI,MODEL_OPENAI
-from time import time
+from datetime import datetime
 
 class OpenAIAPI:
     def __init__(self, base_url: str = None, model: str = None, api_key: str = None):
@@ -20,12 +20,14 @@ class OpenAIAPI:
             "Authorization": f"Bearer {self.api_key}"
         }
         
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         data = {
             "model": self.model,
             "messages": [
                 {
                     "role": "user",
-                    "content": PROMPT.format(time(), question)
+                    "content": PROMPT.format(current_time, question)
                 }
             ]
         }

@@ -1,7 +1,8 @@
 import requests
 from typing import Dict, Any, Optional
 from config.config import PROMPT,API_KEY_GEMINI
-from time import time,sleep
+from datetime import datetime
+from time import sleep
 
 
 class GeminiAPI:
@@ -17,12 +18,14 @@ class GeminiAPI:
             "Content-Type": "application/json"
         }
         
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         data = {
             "contents": [
                 {
                     "parts": [
                         {
-                            "text": PROMPT.format(time(), question)
+                            "text": PROMPT.format(current_time, question)
                         }
                     ]
                 }
