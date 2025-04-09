@@ -171,6 +171,7 @@ HEADERS = {
 # 认证文件路径
 AUTH_FILE = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'auth.json')
 
+# 此处的"当前时间"没有实际用途, 只是为了防止重复的prompt在短时间内大量请求, 被gemini或其他厂商检测到, 触发风控 (类似于沉浸式翻译)
 PROMPT = '''
 当前时间：{}
 你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：
