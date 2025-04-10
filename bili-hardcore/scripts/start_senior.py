@@ -184,4 +184,4 @@ quiz_session = QuizSession()
 def start():
     """启动答题程序"""
     quiz_session.start()
-    logger.info('答题结束')
+    input('答题结束，按回车键退出')

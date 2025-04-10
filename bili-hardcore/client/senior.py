@@ -18,8 +18,10 @@ def category_get():
     });
     if res and res.get('code') == 0:
         return res.get('data')
+    elif res and res.get('code') == 41099:
+        raise Exception('获取分类失败，可能是已经达到答题限制(B站每日限制3次)，请前往B站APP确认是否可以正常答题{}'.format(res))
     else:
-        print('获取分类失败，可能是已开始答题或答题限制{}'.format(res))
+        print('获取分类失败，请前往B站APP确认是否可以正常答题{}'.format(res))
         exit()
 
 def captcha_get():
@@ -38,8 +40,7 @@ def captcha_get():
     if res and res.get('code') == 0:
         return res.get('data')
     else:
-        print('获取验证码失败，可能是已开始答题或答题限制{}'.format(res))
-        exit()
+        raise Exception('获取验证码失败，请前往B站APP确认是否可以正常答题{}'.format(res))
 
 def captcha_submit(code,captcha_token,ids):
     '''

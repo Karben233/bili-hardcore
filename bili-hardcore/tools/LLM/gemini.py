@@ -2,6 +2,7 @@ import requests
 from typing import Dict, Any, Optional
 from config.config import PROMPT,API_KEY_GEMINI
 from time import time,sleep
+from tools.logger import logger
 
 
 class GeminiAPI:
@@ -42,6 +43,12 @@ class GeminiAPI:
                 json=data,
                 timeout=timeout
             )
+            if response.status_code == 429:
+                logger.error("😭触发了 gemini 风控, 尝试以下步骤重试")
+                logger.error("1. 稍等一下重新运行")
+                logger.error("2. 尝试切换代理节点（更换IP）")
+                logger.error("3. 建议更换其他模型答题")
+
             response.raise_for_status()
             return response.json()["candidates"][0]["content"]["parts"][0]["text"]
         except requests.exceptions.RequestException as e:
