@@ -33,13 +33,15 @@ class QuizSession:
                     llm = OpenAIAPI()
                 else:
                     llm = DeepSeekAPI()
+                answer = llm.ask(self.get_question_prompt())
+                logger.info('AI给出的答案:{}'.format(answer))
                 try:
                     answer = int(answer)
                     if not (1 <= answer <= len(self.answers)):
                         logger.warning(f"无效的答案序号: {answer}")
                         continue
                 except ValueError:
-                    logger.warning("AI回复了无关内容[{}],正在重试,如果多次重试后还是未回答成功,请前往app手动回答这一题".format(answer))
+                    logger.warning("AI回复了无关内容:[{}],正在重试,如果多次重试后还是未回答成功,请前往app手动回答这一题".format(answer))
                     continue
 
                 result = self.answers[answer-1]
