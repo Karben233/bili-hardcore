@@ -148,6 +148,8 @@ class QuizSession:
             if result and result.get('code') == 0:
                 logger.info("答案提交成功")
                 return True
+            elif result and result.get('code') == 41103:
+                logger.error(f"答案提交失败，请检查是否已经是硬核会员了？: {result}")
             else:
                 logger.error(f"答案提交失败: {result}")
                 return False
