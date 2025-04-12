@@ -13,13 +13,16 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 
 ### 方式一：从 release 下载可执行文件
 #### Windows
-1. 下载 `bili-hardcore.exe`
-2. 双击 exe 运行或在命令行中执行 `.\bili-hardcore.exe`
+1. 下载 `bili-hardcore-windows-*.exe`
+2. 双击 exe 运行或在命令行中执行 `.\bili-hardcore-windows-*.exe`
 
-#### ~~Unix/Linux/Mac~~
-我的电脑是 x86_64 Windows，打出来的包很多人用不了，建议通过源码运行
-1. ~~下载 `bili-hardcore.sh`~~
-2. ~~在命令行中执行 `./bili-hardcore.sh`~~
+#### Mac
+1. 下载 `bili-hardcore-mac-*`
+2. 命令行中执行 `chmod +x bili-hardcore-mac-* && ./bili-hardcore-mac-*`
+
+#### Ubuntu
+1. 下载 `bili-hardcore-ubuntu-*`
+2. 命令行中执行 `chmod +x bili-hardcore-ubuntu-* &&./bili-hardcore-ubuntu-*`
 
 ### 方式二：从源码运行
 请使用 Python 3.9 及以上版本运行
