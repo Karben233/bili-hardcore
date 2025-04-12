@@ -1,0 +1,58 @@
+name: Build Cross-Platform Executables
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.13"]
+
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 设置 Python 环境
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 缓存 pip 依赖
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      # 打包可执行文件
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller bili-hardcore.spec --noconfirm
+
+      # 上传单文件可执行程序作为 artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bili-hardcore-${{ matrix.os }}
+          path: dist/bili-hardcore*
+          retention-days: 7
