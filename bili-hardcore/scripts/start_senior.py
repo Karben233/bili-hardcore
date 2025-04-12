@@ -94,7 +94,7 @@ class QuizSession:
             logger.info("分类信息:")
             for cat in category.get('categories', []):
                 logger.info(f"ID: {cat.get('id')} - {cat.get('name')}")
-            logger.info("tips: 输入多个分类ID请用 *英文逗号* 隔开,例如:1,2,3")
+            logger.info("tips: 输入多个分类ID请用 *英文逗号* 隔开,例如:1,2,3(最多三个分类)")
             ids = input('请输入分类ID: ')
             logger.info("获取验证码...")
             captcha_res = captcha_get()
@@ -149,7 +149,7 @@ class QuizSession:
                 logger.info("答案提交成功")
                 return True
             elif result and result.get('code') == 41103:
-                logger.error(f"答案提交失败，请检查是否已经是硬核会员了？: {result}")
+                logger.error(f"答案提交失败，请检查是否已经是硬核会员了？或前往B站app查看是否还能正常答题: {result}")
             else:
                 logger.error(f"答案提交失败: {result}")
                 return False
