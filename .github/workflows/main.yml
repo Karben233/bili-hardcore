@@ -1,12 +1,10 @@
-name: Build Cross-Platform Executables
+name: Build and Release Cross-Platform Executables
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    tags:
+      - 'v*.*.*' # 匹配以 v1.0.0 格式的标签 
+  workflow_dispatch:  # 添加手动触发
 
 jobs:
   build:
@@ -56,3 +54,26 @@ jobs:
           name: bili-hardcore-${{ matrix.os }}
           path: dist/bili-hardcore*
           retention-days: 7
+
+      # 创建 GitHub Release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      # 上传 Release 资产
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/bili-hardcore${{ runner.os == 'Windows' && '.exe' || '' }}
+          asset_name: bili-hardcore-${{ matrix.os }}-${{ github.ref_name }}${{ runner.os == 'Windows' && '.exe' || '' }}
+          asset_content_type: application/octet-stream
