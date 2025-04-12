@@ -3,8 +3,8 @@ name: Build and Release Cross-Platform Executables
 on:
   push:
     tags:
-      - 'v*.*.*' # 匹配以 v1.0.0 格式的标签 
-  workflow_dispatch:  # 添加手动触发
+      - '*'  # 匹配所有 tag，例如 v1.0.0
+  workflow_dispatch:  # 手动触发
 
 jobs:
   build:
@@ -35,12 +35,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      # 安装 UPX
+      - name: Install UPX
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        run: |
+          if [ "${{ matrix.os }}" = "Ubuntu-latest" ]; then
+            sudo apt-get update
+            sudo apt-get install -y upx-ucl
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            brew install upx
+          fi
+
       # 安装依赖
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller
-          pip install -r requirements.txt
+          pip install pyinstaller requests qrcode
+          # 如果有 requirements.txt，替换为：
+          # pip install -r requirements.txt
 
       # 打包可执行文件
       - name: Build with PyInstaller
@@ -51,12 +63,30 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bili-hardcore-${{ matrix.os }}
+          name: bili-hardcore-${{ matrix.os }}-${{ github.event_name == 'push' && github.ref_name || github.sha }}
           path: dist/bili-hardcore*
           retention-days: 7
 
-      # 创建 GitHub Release
+      # 检查是否已存在 Release（仅在 tag 触发时）
+      - name: Check for existing Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: check_release
+        run: |
+          release_url=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" | jq -r '.url')
+          if [ "$release_url" != "null" ]; then
+            echo "Release exists, URL: $release_url"
+            upload_url=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" | jq -r '.upload_url')
+            echo "upload_url=$upload_url" >> $GITHUB_OUTPUT
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 创建 GitHub Release（仅在 tag 触发且 Release 不存在时）
       - name: Create Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && steps.check_release.outputs.release_exists == 'false'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -67,13 +97,25 @@ jobs:
           draft: false
           prerelease: false
 
-      # 上传 Release 资产
+      # 设置 upload_url（如果 Release 已存在，使用现有 URL）
+      - name: Set upload_url
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: set_upload_url
+        run: |
+          if [ "${{ steps.check_release.outputs.release_exists }}" == "true" ]; then
+            echo "upload_url=${{ steps.check_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
+          fi
+
+      # 上传 Release 资产（仅在 tag 触发时）
       - name: Upload Release Asset
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
           asset_path: dist/bili-hardcore${{ runner.os == 'Windows' && '.exe' || '' }}
           asset_name: bili-hardcore-${{ matrix.os }}-${{ github.ref_name }}${{ runner.os == 'Windows' && '.exe' || '' }}
           asset_content_type: application/octet-stream
