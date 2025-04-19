@@ -10,7 +10,7 @@ class OpenAIAPI:
         self.model = model or MODEL_OPENAI
         self.api_key = api_key or API_KEY_OPENAI
         
-        if not all([self.base_url, self.model, self.api_key]):
+        if not all([self.base_url, self.model]):
             raise ValueError("OpenAI配置不完整，请先配置BASE_URL_OPENAI、MODEL_OPENAI和API_KEY_OPENAI")
 
     def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:

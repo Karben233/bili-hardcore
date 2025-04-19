@@ -132,13 +132,13 @@ elif model_choice == '1':
             
 elif model_choice == '3':
     BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
-    if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+    if not all([BASE_URL_OPENAI, MODEL_OPENAI]):
         BASE_URL_OPENAI = input('请输入API基础URL (例如: https://ark.cn-beijing.volces.com/api/v3): ').strip()
         if BASE_URL_OPENAI.endswith('/'):
             BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
         MODEL_OPENAI = input('请输入模型名称 (例如: deepseek-v3-250324, 不建议使用思考模型，可能产生意想不到的问题): ').strip()
         API_KEY_OPENAI = input('请输入API密钥: ').strip()
-        if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+        if all([BASE_URL_OPENAI, MODEL_OPENAI]):
             save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
 else:
     print("无效的选择，默认使用deepseek")
