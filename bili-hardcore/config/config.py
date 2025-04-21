@@ -103,7 +103,7 @@ def load_openai_config():
 
 logger.info("哔哩哔哩硬核会员自动答题脚本")
 logger.info("本软件免费且代码开源")
-logger.info("使用问题反馈请至 https://github.com/Karben233/bili-hardcore 提交 issue")
+logger.info("源码&问题反馈: https://github.com/Karben233/bili-hardcore")
 
 check()
 # 选择使用的LLM模型
