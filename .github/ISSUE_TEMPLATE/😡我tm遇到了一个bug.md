@@ -1,6 +1,6 @@
 ---
-name: 我遇到了一个bug
-about: bug 提交
+name: "\U0001F621我TM遇到了一个bug"
+about: 通过此模板创建【bug反馈】
 title: ''
 labels: ''
 assignees: ''
@@ -11,7 +11,8 @@ assignees: ''
 
    - [ ] DeepSeek(V3)
    - [ ] Gemini(2.0-flash)
-   - [x] 自定义
+   - [ ] 自定义
+
 2. 如果是自定义模式
 
    1. 填写的 API 基础 URL: `请填写 API 基础 URL`
@@ -23,3 +24,7 @@ assignees: ''
    # 请在这里输入具体的日志内容
    
    ```
+
+4. 问题描述
+
+​	请在此处描述您遇到的问题
