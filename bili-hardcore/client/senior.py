@@ -1,15 +1,13 @@
 from tools.request_b import get, post
-
-access_token = None;
-csrf = None;
+from config import config
 
 def category_get():
     '''
     获取分类
     '''
     res = get('https://api.bilibili.com/x/senior/v1/category', {
-        'access_key':access_token,
-        'csrf':csrf,
+        'access_key':config.access_token,
+        'csrf':config.csrf,
         'disable_rcmd':0,
         'mobi_app':'android',
         'platform':'android',
@@ -21,16 +19,15 @@ def category_get():
     elif res and res.get('code') == 41099:
         raise Exception('获取分类失败，可能是已经达到答题限制(B站每日限制3次)，请前往B站APP确认是否可以正常答题{}'.format(res))
     else:
-        print('获取分类失败，请前往B站APP确认是否可以正常答题{}'.format(res))
-        exit()
+        raise Exception('获取分类失败，请前往B站APP确认是否可以正常答题{}'.format(res))
 
 def captcha_get():
     '''
     获取验证码
     '''
     res = get('https://api.bilibili.com/x/senior/v1/captcha', {
-        'access_key':access_token,
-        'csrf':csrf,
+        'access_key':config.access_token,
+        'csrf':config.csrf,
         'disable_rcmd':0,
         'mobi_app':'android',
         'platform':'android',
@@ -47,10 +44,10 @@ def captcha_submit(code,captcha_token,ids):
     提交验证码
     '''
     res = post('https://api.bilibili.com/x/senior/v1/captcha/submit', {
-        "access_key": access_token,
+        "access_key": config.access_token,
+        "csrf": config.csrf,
         "bili_code": code,
         "bili_token": captcha_token,
-        "csrf": csrf,
         "disable_rcmd": "0",
         "gt_challenge": "",
         "gt_seccode": "",
@@ -71,8 +68,8 @@ def question_get():
     获取题目
     '''
     return get('https://api.bilibili.com/x/senior/v1/question', {
-        "access_key": access_token,
-        "csrf": csrf,
+        "access_key": config.access_token,
+        "csrf": config.csrf,
         "disable_rcmd": "0",
         "mobi_app": "android",
         "platform": "android",
@@ -85,8 +82,8 @@ def question_submit(id,ans_hash,ans_text):
     提交答案
     '''
     return post('https://api.bilibili.com/x/senior/v1/answer/submit', {
-        "access_key": access_token,
-        "csrf": csrf,
+        "access_key": config.access_token,
+        "csrf": config.csrf,
         "id": id,
         "ans_hash": ans_hash,
         "ans_text": ans_text,
@@ -102,8 +99,8 @@ def question_result():
     获取答题结果
     '''
     res = get('https://api.bilibili.com/x/senior/v1/answer/result', {
-        "access_key": access_token,
-        "csrf": csrf,
+        "access_key": config.access_token,
+        "csrf": config.csrf,
         "disable_rcmd": "0",
         "mobi_app": "android",
         "platform": "android",

@@ -9,6 +9,9 @@ BASE_URL_OPENAI = ''
 MODEL_OPENAI = ''
 API_KEY_OPENAI = ''
 
+access_token = None;
+csrf = None;
+
 def load_api_key(key_type):
     """从用户目录加载API密钥
     

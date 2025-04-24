@@ -6,9 +6,8 @@ from tools.bili_ticket import getTicket
 from client.login import qrcode_get, qrcode_poll
 from qrcode.main import QRCode
 from qrcode.constants import ERROR_CORRECT_L
-from client import senior
 import tools.request_b
-from config.config import AUTH_FILE
+from config import config
 from tools.logger import logger
 
 def load_auth_data():
@@ -17,20 +16,20 @@ def load_auth_data():
     Returns:
         bool: 是否成功加载认证信息
     """
-    if os.path.exists(AUTH_FILE):
+    if os.path.exists(config.AUTH_FILE):
         try:
             # 检查文件最后修改时间是否超过7天
-            file_mtime = os.path.getmtime(AUTH_FILE)
+            file_mtime = os.path.getmtime(config.AUTH_FILE)
             current_time = time.time()
             if (current_time - file_mtime) > 7 * 24 * 3600:  # 7天的秒数
                 logger.info('认证信息已过期（超过7天），需要重新登录')
                 return False
                 
-            with open(AUTH_FILE, 'r') as f:
+            with open(config.AUTH_FILE, 'r') as f:
                 auth_data = json.load(f)
                 if all(key in auth_data for key in ['access_token', 'csrf', 'mid', 'cookie']):
-                    senior.access_token = auth_data['access_token']
-                    senior.csrf = auth_data['csrf']
+                    config.access_token = auth_data['access_token']
+                    config.csrf = auth_data['csrf']
                     tools.request_b.headers.update({
                         'x-bili-mid': auth_data['mid'],
                         'cookie': auth_data['cookie']
@@ -48,8 +47,8 @@ def save_auth_data(auth_data):
         auth_data (dict): 认证信息
     """
     try:
-        os.makedirs(os.path.dirname(AUTH_FILE), exist_ok=True)
-        with open(AUTH_FILE, 'w') as f:
+        os.makedirs(os.path.dirname(config.AUTH_FILE), exist_ok=True)
+        with open(config.AUTH_FILE, 'w') as f:
             json.dump(auth_data, f, indent=4)
         logger.info('认证信息已保存到缓存')
     except Exception as e:
@@ -110,8 +109,8 @@ def auth():
                     cookie_str = ';'.join([f"{cookie.get('name')}={cookie.get('value')}" for cookie in cookies])
                     auth_data.update({'cookie': cookie_str})
                     # 更新认证信息
-                    senior.access_token = auth_data['access_token']
-                    senior.csrf = auth_data['csrf']
+                    config.access_token = auth_data['access_token']
+                    config.csrf = auth_data['csrf']
                     tools.request_b.headers.update({
                         'x-bili-mid': auth_data['mid'],
                         'cookie': auth_data['cookie']

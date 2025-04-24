@@ -2,6 +2,9 @@ import logging
 import os
 from datetime import datetime
 
+logger_level = logging.INFO
+# logger_level = logging.DEBUG
+
 def setup_logger(name='bili-hardcore'):
     """设置日志系统
     
@@ -12,7 +15,7 @@ def setup_logger(name='bili-hardcore'):
         logging.Logger: 配置好的日志器实例
     """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logger_level)
 
     # 创建日志目录
     log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
@@ -21,11 +24,11 @@ def setup_logger(name='bili-hardcore'):
     # 文件处理器
     log_file = os.path.join(log_dir, f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log')
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logger_level)
 
     # 控制台处理器
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logger_level)
 
     # 设置日志格式
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
