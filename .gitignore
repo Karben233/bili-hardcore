@@ -32,7 +32,6 @@ MANIFEST
 *.manifest
 *.spec
 !bili-hardcore.spec
-!bili-hardcore-sh.spec
 
 # Installer logs
 pip-log.txt
