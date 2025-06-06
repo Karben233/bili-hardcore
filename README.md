@@ -26,8 +26,9 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 2. 双击 exe 运行或在命令行中执行 `.\bili-hardcore-windows-*.exe`
 
 #### Mac
-1. 下载 `bili-hardcore-mac-*`
-2. 命令行中执行 `chmod +x bili-hardcore-mac-* && ./bili-hardcore-mac-*`
+1. 下载 `bili-hardcore-macos-*`
+2. 命令行中执行 `chmod +x bili-hardcore-macos-* && ./bili-hardcore-macos-*`
+>如果碰到"Apple could not verify xxx is free of malware that may harm your Mac"问题,可以在**系统设置 > 隐私与安全性**中点击**仍要打开**,或者命令行执行 `xattr -d com.apple.quarantine ./bili-hardcore-macos-*`
 
 #### Ubuntu
 1. 下载 `bili-hardcore-ubuntu-*`
