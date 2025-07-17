@@ -3,8 +3,11 @@ from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
 from tools.LLM.deepseek import DeepSeekAPI
 from tools.LLM.openai import OpenAIAPI
+import base64
+import requests
+import os
 
-from config.config import model_choice
+from config.config import model_choice, PROMPT_IMAGE, HEADERS
 from scripts.check_config import clear_config
 from client.ziantt import save_question
 from time import sleep
@@ -120,6 +123,22 @@ class QuizSession:
             logger.info("请打开链接查看验证码内容:{}".format(captcha_res.get('url')))
             if not captcha_res:
                 return False
+            
+            logger.info("正在保存验证码图片...")
+            # 使用正确的请求头下载验证码图片
+            image_response = requests.get(captcha_res.get('url'), headers=HEADERS)
+            image_response.raise_for_status()
+            image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+            logger.info(f"验证码图片下载成功, 图片大小: {len(image_response.content)} bytes")
+            
+            # 保存图片到本地用于验证
+            captcha_image_path = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'captcha.jpg')
+            os.makedirs(os.path.dirname(captcha_image_path), exist_ok=True)
+            with open(captcha_image_path, 'wb') as f:
+                f.write(image_response.content)
+            logger.info(f"验证码图片已保存到: {captcha_image_path}")
+
+            logger.info("请根据保存的验证码图片手动输入验证码")
             captcha = input('请输入验证码: ')
 
             if captcha_submit(code=captcha, captcha_token=captcha_res.get('token'), ids=ids):
