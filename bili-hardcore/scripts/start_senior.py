@@ -7,7 +7,7 @@ import base64
 import requests
 import os
 
-from config.config import model_choice, PROMPT_IMAGE, HEADERS
+from config.config import model_choice, HEADERS
 from scripts.check_config import clear_config
 from client.ziantt import save_question
 from time import sleep
