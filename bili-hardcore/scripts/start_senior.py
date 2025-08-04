@@ -121,24 +121,9 @@ class QuizSession:
             logger.info("获取验证码...")
             captcha_res = captcha_get()
             logger.info("请打开链接查看验证码内容:{}".format(captcha_res.get('url')))
+            logger.info("⚠️⚠️⚠️打开验证码内容后请多刷新几次后再填写，否则可能出现验证码失效的情况⚠️⚠️⚠️")
             if not captcha_res:
                 return False
-            
-            logger.info("正在保存验证码图片...")
-            # 使用正确的请求头下载验证码图片
-            image_response = requests.get(captcha_res.get('url'), headers=HEADERS)
-            image_response.raise_for_status()
-            image_base64 = base64.b64encode(image_response.content).decode('utf-8')
-            logger.info(f"验证码图片下载成功, 图片大小: {len(image_response.content)} bytes")
-            
-            # 保存图片到本地用于验证
-            captcha_image_path = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'captcha.jpg')
-            os.makedirs(os.path.dirname(captcha_image_path), exist_ok=True)
-            with open(captcha_image_path, 'wb') as f:
-                f.write(image_response.content)
-            logger.info(f"验证码图片已保存到: {captcha_image_path}")
-
-            logger.info("请根据保存的验证码图片手动输入验证码")
             captcha = input('请输入验证码: ')
 
             if captcha_submit(code=captcha, captcha_token=captcha_res.get('token'), ids=ids):
