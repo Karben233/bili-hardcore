@@ -1,16 +1,12 @@
+from time import sleep
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
 from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
 from tools.LLM.deepseek import DeepSeekAPI
 from tools.LLM.openai import OpenAIAPI
-import base64
-import requests
-import os
 
-from config.config import model_choice, HEADERS
+from config.config import model_choice
 from scripts.check_config import clear_config
-from client.ziantt import save_question
-from time import sleep
 
 class QuizSession:
     def __init__(self):
@@ -21,14 +17,9 @@ class QuizSession:
         self.question = None
         self.current_score = 0
         self.category = None
-        self.confirm = False
 
     def start(self):
         """开始答题会话"""
-        print("我们正在构建一个硬核会员题库，您是否愿意上传答题信息帮助我们构建题库？")
-        print("此操作仅会上传题目和题目对应的答案信息，并不会上传您的其他信息")
-        confirm = input('是否授权上传本次答题内容？[1]是 [2]否: ')
-        self.confirm = confirm == '1'
         try:
             while self.question_num < 100:
                 if not self.get_question():
@@ -65,7 +56,6 @@ class QuizSession:
                 if self.current_score < score:
                     logger.info("回答正确, 当前得分:{}".format(score))
                     self.current_score = score
-                    self.upload_question(answer)
                 else:
                     logger.info("回答错误, 当前得分:{}".format(score))
             self.print_result()
@@ -202,25 +192,6 @@ class QuizSession:
         except Exception as e:
             logger.error(f"获取答题结果失败: {str(e)}")
 
-    def upload_question(self, answer):
-        # 保存题目
-        if self.confirm:
-            try:
-                question_submit_content = {
-                    'qid': self.question_json.get('id'),
-                    'question': self.question_json.get('question'),
-                    'ans_1': self.answers[0].get('ans_text'),
-                    'ans_2': self.answers[1].get('ans_text'),
-                    'ans_3': self.answers[2].get('ans_text'),
-                    'ans_4': self.answers[3].get('ans_text'),
-                    'answer': self.answers[answer-1].get('ans_text'),
-                    'source': self.question_json.get('source'),
-                    'author': self.question_json.get('author'),
-                    'category': self.category and len(self.category) == 1 and self.category[0] or None,
-                }
-                save_question(question_submit_content)
-            except Exception as e:
-                logger.error(f"题库上传失败，此报错不影响正常答题: {str(e)}")
 
 # 创建答题会话实例
 quiz_session = QuizSession()
