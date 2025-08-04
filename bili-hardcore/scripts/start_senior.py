@@ -1,3 +1,4 @@
+import math
 from time import sleep
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
 from tools.logger import logger
@@ -21,6 +22,7 @@ class QuizSession:
     def start(self):
         """开始答题会话"""
         try:
+            retry_count = 1
             while self.question_num < 100:
                 if not self.get_question():
                     logger.error("获取题目失败")
@@ -37,7 +39,18 @@ class QuizSession:
                     llm = OpenAIAPI()
                 else:
                     llm = DeepSeekAPI()
-                answer = llm.ask(self.get_question_prompt())
+                try:
+                    answer = llm.ask(self.get_question_prompt())
+                except Exception as e:
+                    logger.error(f"AI回答问题时发生错误: {str(e)}")
+                    sleep_time = math.pow(2, retry_count + 1);
+                    logger.info(f"正在重试({sleep_time:.0f}s)...")
+                    sleep(sleep_time)
+                    retry_count += 1
+                    if retry_count > 7:
+                        logger.error("重试次数过多，程序终止，请检查配置是否正确")
+                        return
+                    continue
                 logger.info('AI给出的答案:{}'.format(answer))
                 try:
                     answer = int(answer)
