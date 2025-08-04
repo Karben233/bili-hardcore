@@ -3,8 +3,11 @@ from tools.logger import logger
 from tools.LLM.gemini import GeminiAPI
 from tools.LLM.deepseek import DeepSeekAPI
 from tools.LLM.openai import OpenAIAPI
+import base64
+import requests
+import os
 
-from config.config import model_choice
+from config.config import model_choice, HEADERS
 from scripts.check_config import clear_config
 from client.ziantt import save_question
 from time import sleep
@@ -118,6 +121,7 @@ class QuizSession:
             logger.info("获取验证码...")
             captcha_res = captcha_get()
             logger.info("请打开链接查看验证码内容:{}".format(captcha_res.get('url')))
+            logger.info("⚠️⚠️⚠️打开验证码内容后请多刷新几次后再填写，否则可能出现验证码失效的情况⚠️⚠️⚠️")
             if not captcha_res:
                 return False
             captcha = input('请输入验证码: ')
