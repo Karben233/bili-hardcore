@@ -8,7 +8,7 @@ from tools.logger import logger
 class GeminiAPI:
     def __init__(self):
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
-        self.model = "gemini-2.0-flash"
+        self.model = "gemini-2.5-flash"
         self.api_key = API_KEY_GEMINI
 
     def ask(self, question: str, timeout: Optional[int] = 30) -> Dict[str, Any]:

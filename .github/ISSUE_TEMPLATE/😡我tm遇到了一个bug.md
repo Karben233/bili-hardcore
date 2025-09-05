@@ -9,8 +9,8 @@ assignees: ''
 
 1. 使用的模型/模式：
 
-   - [ ] DeepSeek(V3)
-   - [ ] Gemini(2.0-flash)
+   - [ ] DeepSeek
+   - [ ] Gemini
    - [ ] 自定义
 
 2. 如果是自定义模式
