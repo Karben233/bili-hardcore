@@ -7,7 +7,7 @@ from tools.logger import logger
 
 class GeminiAPI:
     def __init__(self):
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+        self.base_url = "https://ai-proxy.chatwise.app/generativelanguage/v1beta"
         self.model = "gemini-2.5-flash"
         self.api_key = API_KEY_GEMINI
 
