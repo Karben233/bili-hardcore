@@ -111,8 +111,8 @@ logger.info("源码&问题反馈: https://github.com/Karben233/bili-hardcore")
 check()
 # 选择使用的LLM模型
 print("请选择使用的LLM模型:")
-print("1. DeepSeek(V3)")
-print("2. Gemini(2.0-flash)(免费版可能会触发 Gemini 风控 429 报错)")
+print("1. DeepSeek")
+print("2. Gemini(免费版可能会触发 Gemini 风控 429 报错)")
 print("3. 自定义 OpenAI 格式的 API 及模型 (OpenAI, 火山引擎, 硅基流动等)")
 model_choice = input("请输入数字(1,2,3): ").strip()
 
