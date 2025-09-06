@@ -22,8 +22,8 @@ class QuizSession:
     def start(self):
         """开始答题会话"""
         try:
-            retry_count = 1
             while self.question_num < 100:
+                retry_count = 1
                 if not self.get_question():
                     logger.error("获取题目失败")
                     return
