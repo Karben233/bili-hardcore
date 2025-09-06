@@ -66,11 +66,12 @@ class QuizSession:
                     logger.error("提交答案失败")
                     return
                 score = question_result().get('score');
+                accuracy = (score / self.question_num) * 100 if self.question_num > 0 else 0
                 if self.current_score < score:
-                    logger.info("回答正确, 当前得分:{}".format(score))
+                    logger.info("回答正确, 当前得分:{}, 当前正确率:{:.1f}%".format(score, accuracy))
                     self.current_score = score
                 else:
-                    logger.info("回答错误, 当前得分:{}".format(score))
+                    logger.info("回答错误, 当前得分:{}, 当前正确率:{:.1f}%".format(score, accuracy))
             self.print_result()
         except KeyboardInterrupt:
             logger.info("答题会话已终止")
