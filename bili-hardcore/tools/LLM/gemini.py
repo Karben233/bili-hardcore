@@ -35,7 +35,6 @@ class GeminiAPI:
         }
 
         try:
-            sleep(5) # 每次请求间隔5秒，这样可能会减少 429 错误
             response = requests.post(
                 url,
                 headers=headers,
