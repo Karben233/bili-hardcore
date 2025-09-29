@@ -1,5 +1,6 @@
-from tools.request_b import session
 from tools.logger import logger
+from tools.request_b import session
+
 
 def save_question(json):
     '''

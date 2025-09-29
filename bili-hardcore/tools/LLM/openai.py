@@ -1,8 +1,10 @@
-import requests
-from typing import Dict, Any, Optional
-from config.config import PROMPT, API_KEY_OPENAI, BASE_URL_OPENAI,MODEL_OPENAI
 from time import time
+from typing import Any, Dict, Optional
+
+import requests
+from config.config import API_KEY_OPENAI, BASE_URL_OPENAI, MODEL_OPENAI, PROMPT
 from tools.logger import logger
+
 
 class OpenAIAPI:
     def __init__(self, base_url: str = None, model: str = None, api_key: str = None):

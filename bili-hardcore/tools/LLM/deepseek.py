@@ -1,7 +1,9 @@
-import requests
-from typing import Dict, Any, Optional
-from config.config import PROMPT, API_KEY_DEEPSEEK
 from time import time
+from typing import Any, Dict, Optional
+
+import requests
+from config.config import API_KEY_DEEPSEEK, PROMPT
+
 
 class DeepSeekAPI:
     def __init__(self):

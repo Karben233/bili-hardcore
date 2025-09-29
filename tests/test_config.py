@@ -1,11 +1,12 @@
 """
 Unit tests for config module.
 """
-import pytest
 import json
 import os
 import sys
-from unittest.mock import patch, mock_open, call
+from unittest.mock import mock_open, patch
+
+import pytest
 
 # Add the bili-hardcore directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bili-hardcore'))

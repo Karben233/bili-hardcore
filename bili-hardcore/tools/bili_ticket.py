@@ -1,7 +1,9 @@
-import hmac
 import hashlib
-import requests
+import hmac
 import time
+
+import requests
+
 
 def hmac_sha256(key, message):
     """
@@ -38,5 +40,5 @@ def getTicket():
     headers = {
             'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
         }
-    resp = requests.post(url, params=params,headers=headers).json()
+    resp = requests.post(url, params=params, headers=headers, timeout=30).json()
     return resp.get('data').get('ticket')

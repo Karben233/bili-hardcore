@@ -1,11 +1,12 @@
 """
 Unit tests for tools/logger.py module.
 """
-import pytest
+import logging
 import os
 import sys
-import logging
-from unittest.mock import patch, Mock, mock_open
+from unittest.mock import Mock, mock_open, patch
+
+import pytest
 
 # Add the bili-hardcore directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bili-hardcore'))

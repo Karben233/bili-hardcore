@@ -1,8 +1,9 @@
 """
 Simple test to verify the testing framework works.
 """
-import pytest
 import os
+
+import pytest
 
 
 def test_basic_functionality():
@@ -23,11 +24,12 @@ def test_file_structure():
 
 def test_imports():
     """Test that we can import standard libraries."""
+    import hashlib
     import json
     import time
-    import hashlib
+
     import requests
-    
+
     # Test that imports work
     assert json is not None
     assert time is not None
@@ -63,7 +65,7 @@ class TestSimpleClass:
 def test_mock_functionality():
     """Test mock functionality."""
     from unittest.mock import Mock
-    
+
     # Create a mock object
     mock_obj = Mock()
     mock_obj.return_value = "test_value"

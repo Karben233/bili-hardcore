@@ -1,10 +1,11 @@
 """
 Integration tests for bili-hardcore application.
 """
-import pytest
-import sys
 import os
-from unittest.mock import patch, Mock, MagicMock
+import sys
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add the bili-hardcore directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bili-hardcore'))
@@ -27,7 +28,7 @@ class TestIntegration:
     def test_config_integration(self):
         """Test that config module works with testing environment."""
         from config import config
-        
+
         # Test that testing mode is properly detected
         assert hasattr(config, 'TESTING')
         assert config.TESTING is True
@@ -39,7 +40,7 @@ class TestIntegration:
     def test_logger_integration(self):
         """Test that logger works in testing environment."""
         from tools.logger import logger
-        
+
         # Test that logger can be created
         assert logger is not None
         assert hasattr(logger, 'info')
@@ -49,7 +50,7 @@ class TestIntegration:
     def test_request_basic_functionality(self):
         """Test basic request functionality without external calls."""
         from tools.request_b import appsign
-        
+
         # Test app signature generation
         params = {'test': 'value'}
         result = appsign(params)
@@ -62,8 +63,7 @@ class TestIntegration:
     def test_client_modules_import(self):
         """Test that client modules can be imported."""
         try:
-            from client import login
-            from client import senior
+            from client import login, senior
             assert True  # All imports successful
         except ImportError as e:
             pytest.fail(f"Failed to import client modules: {e}")
@@ -103,9 +103,9 @@ class TestIntegration:
 
     def test_error_handling_integration(self):
         """Test error handling across modules."""
-        from tools.request_b import appsign
         from config import config
-        
+        from tools.request_b import appsign
+
         # Test that error handling works across modules
         try:
             # Test with invalid input
@@ -119,7 +119,7 @@ class TestIntegration:
         """Test interaction between different modules."""
         from config import config
         from tools.request_b import appsign
-        
+
         # Test that config values are used in request signing
         params = {'test': 'value'}
         signed_params = appsign(params)

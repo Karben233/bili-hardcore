@@ -1,13 +1,15 @@
 import math
 from time import sleep
-from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
-from tools.logger import logger
-from tools.LLM.gemini import GeminiAPI
-from tools.LLM.deepseek import DeepSeekAPI
-from tools.LLM.openai import OpenAIAPI
 
+from client.senior import (captcha_get, captcha_submit, category_get,
+                           question_get, question_result, question_submit)
 from config.config import model_choice
 from scripts.check_config import clear_config
+from tools.LLM.deepseek import DeepSeekAPI
+from tools.LLM.gemini import GeminiAPI
+from tools.LLM.openai import OpenAIAPI
+from tools.logger import logger
+
 
 class QuizSession:
     def __init__(self):

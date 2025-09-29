@@ -1,10 +1,11 @@
 """
 Unit tests for client/login.py module.
 """
-import pytest
-import sys
 import os
-from unittest.mock import patch, Mock
+import sys
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Add the bili-hardcore directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bili-hardcore'))

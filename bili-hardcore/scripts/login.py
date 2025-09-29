@@ -1,14 +1,16 @@
-import os
 import json
+import os
 import time
 from time import sleep
-from tools.bili_ticket import getTicket
-from client.login import qrcode_get, qrcode_poll
-from qrcode.main import QRCode
-from qrcode.constants import ERROR_CORRECT_L
+
 import tools.request_b
+from client.login import qrcode_get, qrcode_poll
 from config import config
+from qrcode.constants import ERROR_CORRECT_L
+from qrcode.main import QRCode
+from tools.bili_ticket import getTicket
 from tools.logger import logger
+
 
 def load_auth_data():
     """从缓存加载认证信息

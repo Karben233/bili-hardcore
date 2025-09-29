@@ -1,11 +1,12 @@
 import hashlib
 import time
 import urllib.parse
+
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from config.config import API_CONFIG, HEADERS
+from requests.adapters import HTTPAdapter
 from tools.logger import logger
+from urllib3.util.retry import Retry
 
 # 创建Session对象并配置重试策略
 session = requests.Session()
@@ -36,7 +37,7 @@ def appsign(params):
         params.update({'appkey': appkey})
         params = dict(sorted(params.items()))
         query = urllib.parse.urlencode(params)
-        sign = hashlib.md5((query+appsec).encode()).hexdigest()
+        sign = hashlib.md5((query+appsec).encode(), usedforsecurity=False).hexdigest()
         params.update({'sign':sign})
         return params
     except Exception as e:

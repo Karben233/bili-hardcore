@@ -1,12 +1,13 @@
 """
 Unit tests for request_b module.
 """
-import pytest
 import hashlib
-import time
-import sys
 import os
-from unittest.mock import patch, Mock, call
+import sys
+import time
+from unittest.mock import Mock, call, patch
+
+import pytest
 
 # Add the bili-hardcore directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bili-hardcore'))

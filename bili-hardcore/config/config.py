@@ -1,7 +1,8 @@
-import os
-from scripts.check_config import check
 # API Keys
 import json
+import os
+
+from scripts.check_config import check
 from tools.logger import logger
 
 # OpenAI默认配置
@@ -110,6 +111,7 @@ logger.info("源码&问题反馈: https://github.com/Karben233/bili-hardcore")
 
 # Check if we're in a test environment
 import sys
+
 TESTING = (
     any('pytest' in arg or 'test' in arg or 'unittest' in arg for arg in sys.argv) or 
     'PYTEST_CURRENT_TEST' in os.environ or

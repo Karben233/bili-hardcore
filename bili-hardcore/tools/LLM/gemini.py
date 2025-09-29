@@ -1,7 +1,8 @@
+from time import sleep, time
+from typing import Any, Dict, Optional
+
 import requests
-from typing import Dict, Any, Optional
-from config.config import PROMPT,API_KEY_GEMINI
-from time import time,sleep
+from config.config import API_KEY_GEMINI, PROMPT
 from tools.logger import logger
 
 

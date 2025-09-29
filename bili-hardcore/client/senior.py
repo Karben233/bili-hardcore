@@ -1,5 +1,6 @@
-from tools.request_b import get, post
 from config import config
+from tools.request_b import get, post
+
 
 def category_get():
     '''
