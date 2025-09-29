@@ -71,7 +71,7 @@ pip install -r requirements-test.txt
 2. 运行测试：
 
 ```bash
-# 运行所有测试 (70个测试全部通过)
+# 运行所有测试
 pytest tests/ -v
 
 # 运行特定模块测试
