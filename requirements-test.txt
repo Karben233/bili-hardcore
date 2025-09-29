@@ -1,0 +1,9 @@
+# Testing dependencies for bili-hardcore
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+pytest-xdist>=3.3.1
+coverage>=7.2.7
+mock>=5.1.0
+requests-mock>=1.11.0

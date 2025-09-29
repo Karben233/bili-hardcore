@@ -9,8 +9,8 @@ BASE_URL_OPENAI = ''
 MODEL_OPENAI = ''
 API_KEY_OPENAI = ''
 
-access_token = None;
-csrf = None;
+access_token = None
+csrf = None
 
 def load_api_key(key_type):
     """从用户目录加载API密钥
@@ -108,55 +108,76 @@ logger.info("哔哩哔哩硬核会员自动答题脚本")
 logger.info("本软件免费且代码开源")
 logger.info("源码&问题反馈: https://github.com/Karben233/bili-hardcore")
 
-check()
-# 选择使用的LLM模型
-print("请选择使用的LLM模型:")
-print("1. DeepSeek")
-print("2. Gemini(免费版可能会触发 Gemini 风控 429 报错)")
-print("3. 自定义 OpenAI 格式的 API 及模型 (OpenAI, 火山引擎, 硅基流动等)")
-model_choice = input("请输入数字(1,2,3): ").strip()
+# Check if we're in a test environment
+import sys
+TESTING = (
+    any('pytest' in arg or 'test' in arg or 'unittest' in arg for arg in sys.argv) or 
+    'PYTEST_CURRENT_TEST' in os.environ or
+    os.environ.get('BILI_HARDCORE_TESTING', '').lower() in ('1', 'true', 'yes')
+)
+
+if not TESTING:
+    check()
+    # 选择使用的LLM模型
+    print("请选择使用的LLM模型:")
+    print("1. DeepSeek")
+    print("2. Gemini(免费版可能会触发 Gemini 风控 429 报错)")
+    print("3. 自定义 OpenAI 格式的 API 及模型 (OpenAI, 火山引擎, 硅基流动等)")
+    model_choice = input("请输入数字(1,2,3): ").strip()
+else:
+    # Default values for testing
+    model_choice = '1'
 
 API_KEY_GEMINI = ''
 API_KEY_DEEPSEEK = ''
 
-if model_choice == '2':
-    API_KEY_GEMINI = load_api_key('gemini')
-    if not API_KEY_GEMINI:
-        API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
-        if API_KEY_GEMINI:
-            save_api_key('gemini', API_KEY_GEMINI)
-
-elif model_choice == '1':
-    API_KEY_DEEPSEEK = load_api_key('deepseek')
-    if not API_KEY_DEEPSEEK:
-        API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
-        if API_KEY_DEEPSEEK:
-            save_api_key('deepseek', API_KEY_DEEPSEEK)
-            
-elif model_choice == '3':
-    BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
-    if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
-        BASE_URL_OPENAI = input('请输入API基础URL (例如: https://ark.cn-beijing.volces.com/api/v3): ').strip()
-        if BASE_URL_OPENAI.endswith('/'):
-            BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
-        MODEL_OPENAI = input('请输入模型名称 (例如: deepseek-v3-250324, 不建议使用思考模型，可能产生意想不到的问题): ').strip()
-        API_KEY_OPENAI = input('请输入API密钥: ').strip()
-        if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
-            save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
+if TESTING:
+    # Default test values
+    API_KEY_DEEPSEEK = 'test_deepseek_key'
+    API_KEY_GEMINI = 'test_gemini_key'
+    BASE_URL_OPENAI = 'https://api.test.com/v1'
+    MODEL_OPENAI = 'test-model'
+    API_KEY_OPENAI = 'test_openai_key'
 else:
-    print("无效的选择，默认使用deepseek")
-    API_KEY_DEEPSEEK = load_api_key('deepseek')
-    if not API_KEY_DEEPSEEK:
-        API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥:').strip()
-        if API_KEY_DEEPSEEK:
-            save_api_key('deepseek', API_KEY_DEEPSEEK)
+    if model_choice == '2':
+        API_KEY_GEMINI = load_api_key('gemini')
+        if not API_KEY_GEMINI:
+            API_KEY_GEMINI = input('请输入GEMINI API密钥: ').strip()
+            if API_KEY_GEMINI:
+                save_api_key('gemini', API_KEY_GEMINI)
+
+    elif model_choice == '1':
+        API_KEY_DEEPSEEK = load_api_key('deepseek')
+        if not API_KEY_DEEPSEEK:
+            API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥: ').strip()
+            if API_KEY_DEEPSEEK:
+                save_api_key('deepseek', API_KEY_DEEPSEEK)
+                
+    elif model_choice == '3':
+        BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
+        if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+            BASE_URL_OPENAI = input('请输入API基础URL (例如: https://ark.cn-beijing.volces.com/api/v3): ').strip()
+            if BASE_URL_OPENAI.endswith('/'):
+                BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
+            MODEL_OPENAI = input('请输入模型名称 (例如: deepseek-v3-250324, 不建议使用思考模型，可能产生意想不到的问题): ').strip()
+            API_KEY_OPENAI = input('请输入API密钥: ').strip()
+            if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+                save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
+    else:
+        print("无效的选择，默认使用deepseek")
+        API_KEY_DEEPSEEK = load_api_key('deepseek')
+        if not API_KEY_DEEPSEEK:
+            API_KEY_DEEPSEEK = input('请输入DEEPSEEK API密钥:').strip()
+            if API_KEY_DEEPSEEK:
+                save_api_key('deepseek', API_KEY_DEEPSEEK)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 日志目录
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
-os.makedirs(LOG_DIR, exist_ok=True)
+if not TESTING:
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 # API配置
 API_CONFIG = {

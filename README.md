@@ -54,6 +54,52 @@ pip install -r requirements.txt
 ```bash
 python bili-hardcore/main.py
 ```
+
+## 开发与测试
+
+### 开发环境设置
+
+1. 克隆项目并安装开发依赖：
+
+```bash
+git clone https://github.com/Karben233/bili-hardcore.git
+cd bili-hardcore
+pip install -r requirements.txt
+pip install -r requirements-test.txt
+```
+
+2. 运行测试：
+
+```bash
+# 运行所有测试 (70个测试全部通过)
+pytest tests/ -v
+
+# 运行特定模块测试
+pytest tests/test_config.py -v        # 配置模块测试
+pytest tests/test_login_client.py -v  # 登录客户端测试
+pytest tests/test_senior_client.py -v # 高级会员测试
+pytest tests/test_llm_deepseek.py -v  # LLM测试
+pytest tests/test_logger.py -v        # 日志模块测试
+pytest tests/test_request_b.py -v     # 请求模块测试
+pytest tests/test_integration.py -v   # 集成测试
+
+# 生成覆盖率报告
+pytest tests/ --cov=bili-hardcore --cov-report=term-missing
+```
+
+3. 代码质量检查：
+
+```bash
+# 代码格式检查
+python run_tests.py --type format-check
+
+# 代码格式化
+python run_tests.py --type format-fix
+
+# 代码检查
+python run_tests.py --type lint
+```
+
 ## 使用流程
 1. 选择回答模型
 2. 输入自己的 API Key
