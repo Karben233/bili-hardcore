@@ -1,4 +1,5 @@
 import math
+import re
 from time import sleep
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
 from tools.logger import logger
@@ -52,13 +53,8 @@ class QuizSession:
                         return
                     continue
                 logger.info('AI给出的答案:{}'.format(answer))
-                try:
-                    answer = int(answer)
-                    if not (1 <= answer <= len(self.answers)):
-                        logger.warning(f"无效的答案序号: {answer}")
-                        continue
-                except ValueError:
-                    logger.warning("AI回复了无关内容:[{}],正在重试,如果多次重试后还是未回答成功,请前往app手动回答这一题".format(answer))
+                answer = self.parse_answer(answer)
+                if not answer:
                     continue
 
                 result = self.answers[answer-1]
@@ -155,6 +151,20 @@ class QuizSession:
         题目:{}
         答案:{}
         '''.format(self.question, self.answers)
+
+    def parse_answer(self, answer):
+        try:
+            answer = int(answer)
+        except ValueError:
+            match = re.search(r'回答[:：]\s*(\d+)', str(answer))
+            if not match:
+                logger.warning(f"AI回复了无关内容:[{answer}],正在重试,如果多次重试后还是未回答成功,请前往app手动回答这一题")
+                return None
+            answer = int(match.group(1))
+        if not (1 <= answer <= len(self.answers)):
+            logger.warning(f"无效的答案序号: {answer}")
+            return None
+        return answer
 
     def submit_answer(self, answer):
         """提交答案
