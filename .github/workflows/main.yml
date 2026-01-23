@@ -8,12 +8,31 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build for ${{ matrix.os }}${{ matrix.arch != 'default' && format(' ({0})', matrix.arch) || '' }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.13"]
+        include:
+          - os: Windows
+            runner: windows-latest
+            arch: x86_64
+            python-version: "3.13"
+          - os: macOS
+            runner: macos-latest
+            arch: arm64
+            python-version: "3.13"
+          - os: macOS
+            runner: macos-13
+            arch: x86_64
+            python-version: "3.13"
+          - os: Linux
+            runner: ubuntu-latest
+            arch: x86_64
+            python-version: "3.13"
+          - os: Linux
+            runner: ubuntu-latest-arm64
+            arch: arm64
+            python-version: "3.13"
 
     steps:
       # 检出代码
@@ -37,12 +56,12 @@ jobs:
 
       # 安装 UPX
       - name: Install UPX
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+        if: matrix.os == 'Linux' || matrix.os == 'macOS'
         run: |
-          if [ "${{ matrix.os }}" = "Ubuntu-latest" ]; then
+          if [ "${{ matrix.os }}" = "Linux" ]; then
             sudo apt-get update
             sudo apt-get install -y upx-ucl
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          elif [ "${{ matrix.os }}" = "macOS" ]; then
             brew install upx
           fi
 
@@ -63,7 +82,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bili-hardcore-${{ matrix.os }}-${{ github.event_name == 'push' && github.ref_name || github.sha }}
+          name: bili-hardcore-${{ matrix.os }}-${{ matrix.arch }}-${{ github.event_name == 'push' && github.ref_name || github.sha }}
           path: dist/bili-hardcore*
           retention-days: 7
 
@@ -118,6 +137,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
-          asset_path: dist/bili-hardcore${{ runner.os == 'Windows' && '.exe' || '' }}
-          asset_name: bili-hardcore-${{ matrix.os }}-${{ github.ref_name }}${{ runner.os == 'Windows' && '.exe' || '' }}
+          asset_path: dist/bili-hardcore${{ matrix.os == 'Windows' && '.exe' || '' }}
+          asset_name: bili-hardcore-${{ matrix.os }}-${{ matrix.arch }}-${{ github.ref_name }}${{ matrix.os == 'Windows' && '.exe' || '' }}
           asset_content_type: application/octet-stream
