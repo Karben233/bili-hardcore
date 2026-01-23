@@ -23,6 +23,10 @@ class OpenAIAPI:
         
         data = {
             "model": self.model,
+            "enable_thinking": False, # 大多数 API 思考参数
+            "thinking": { # deepseek 思考参数
+                "type": "disabled"
+            },
             "messages": [
                 {
                     "role": "user",

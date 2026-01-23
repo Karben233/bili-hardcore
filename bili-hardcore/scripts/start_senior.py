@@ -41,7 +41,7 @@ class QuizSession:
                 else:
                     llm = DeepSeekAPI()
                 try:
-                    answer = llm.ask(self.get_question_prompt())
+                    answer = str(llm.ask(self.get_question_prompt())).strip()
                 except Exception as e:
                     logger.error(f"AI回答问题时发生错误: {str(e)}")
                     sleep_time = math.pow(2, retry_count + 1);
