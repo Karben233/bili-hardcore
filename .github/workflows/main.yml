@@ -22,7 +22,7 @@ jobs:
             arch: arm64
             python-version: "3.13"
           - os: macOS
-            runner: macos-13
+            runner: macos-15-intel
             arch: x86_64
             python-version: "3.13"
           - os: Linux
