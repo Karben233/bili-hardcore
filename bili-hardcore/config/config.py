@@ -1,4 +1,5 @@
 import os
+import sys
 from scripts.check_config import check
 import json
 from tools.logger import logger
@@ -39,17 +40,25 @@ logger.info("哔哩哔哩硬核会员自动答题脚本")
 logger.info("本软件免费且代码开源")
 logger.info("源码&问题反馈: https://github.com/Karben233/bili-hardcore")
 
-check()
+# 支持通过命令行参数直接传入配置: program [url] [model] [apikey]
+cli_args = sys.argv[1:]
+if len(cli_args) >= 3:
+    BASE_URL_OPENAI = cli_args[0].rstrip('/')
+    MODEL_OPENAI = cli_args[1]
+    API_KEY_OPENAI = cli_args[2]
+    save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
+else:
+    check()
 
-BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
-if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
-    BASE_URL_OPENAI = input('请输入API基础URL (例如: https://ark.cn-beijing.volces.com/api/v3): ').strip()
-    if BASE_URL_OPENAI.endswith('/'):
-        BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
-    MODEL_OPENAI = input('请输入模型名称 (例如: deepseek-v3-250324): ').strip()
-    API_KEY_OPENAI = input('请输入API密钥: ').strip()
-    if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
-        save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
+    BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI = load_openai_config()
+    if not all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+        BASE_URL_OPENAI = input('请输入API基础URL (例如: https://ark.cn-beijing.volces.com/api/v3): ').strip()
+        if BASE_URL_OPENAI.endswith('/'):
+            BASE_URL_OPENAI = BASE_URL_OPENAI.rstrip('/')
+        MODEL_OPENAI = input('请输入模型名称 (例如: deepseek-v3-250324): ').strip()
+        API_KEY_OPENAI = input('请输入API密钥: ').strip()
+        if all([BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI]):
+            save_openai_config(BASE_URL_OPENAI, MODEL_OPENAI, API_KEY_OPENAI)
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
