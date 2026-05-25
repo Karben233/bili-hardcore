@@ -3,11 +3,8 @@ import re
 from time import sleep
 from client.senior import captcha_get, captcha_submit, category_get, question_get, question_submit, question_result
 from tools.logger import logger
-from tools.LLM.gemini import GeminiAPI
-from tools.LLM.deepseek import DeepSeekAPI
 from tools.LLM.openai import OpenAIAPI
 
-from config.config import model_choice
 from scripts.check_config import clear_config
 
 class QuizSession:
@@ -19,6 +16,7 @@ class QuizSession:
         self.question = None
         self.current_score = 0
         self.category = None
+        self.llm = OpenAIAPI()
 
     def start(self):
         """开始答题会话"""
@@ -31,17 +29,8 @@ class QuizSession:
                 
                 # 显示题目信息
                 self.display_question()
-                # 根据用户选择初始化对应的LLM模型
-                if model_choice == '1':
-                    llm = DeepSeekAPI()
-                elif model_choice == '2':
-                    llm = GeminiAPI()
-                elif model_choice == '3':
-                    llm = OpenAIAPI()
-                else:
-                    llm = DeepSeekAPI()
                 try:
-                    answer = str(llm.ask(self.get_question_prompt())).strip()
+                    answer = str(self.llm.ask(self.get_question_prompt())).strip()
                 except Exception as e:
                     logger.error(f"AI回答问题时发生错误: {str(e)}")
                     sleep_time = math.pow(2, retry_count + 1);
