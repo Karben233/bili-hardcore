@@ -17,29 +17,27 @@ This project has **no database**. All persistent data is stored as JSON files in
 ```
 ~/.bili-hardcore/
 ├── auth.json              # Login credentials (access_token, csrf, mid, cookie)
-├── gemini_key.json        # Gemini API key
-├── deepseek_key.json      # DeepSeek API key
 └── openai_config.json     # OpenAI-compatible config (base_url, model, api_key)
 ```
 
 ### Read pattern
 
 ```python
-# From config/config.py
-key_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', f'{key_type}_key.json')
-if os.path.exists(key_file):
-    with open(key_file, 'r') as f:
+# From config/config.py — load_openai_config()
+config_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'openai_config.json')
+if os.path.exists(config_file):
+    with open(config_file, 'r') as f:
         data = json.load(f)
-        return data.get('api_key', '')
+        return data.get('base_url', ''), data.get('model', ''), data.get('api_key', '')
 ```
 
 ### Write pattern
 
 ```python
-# From config/config.py
-os.makedirs(os.path.dirname(key_file), exist_ok=True)
-with open(key_file, 'w') as f:
-    json.dump({'api_key': api_key}, f)
+# From config/config.py — save_openai_config()
+os.makedirs(os.path.dirname(config_file), exist_ok=True)
+with open(config_file, 'w') as f:
+    json.dump({'base_url': base_url, 'model': model, 'api_key': api_key}, f)
 ```
 
 ---

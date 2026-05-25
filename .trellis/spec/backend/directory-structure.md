@@ -22,9 +22,7 @@ bili-hardcore/
 │   ├── request_b.py           # Shared requests.Session with retry + app signing
 │   ├── bili_ticket.py         # HMAC-SHA256 ticket generation
 │   └── LLM/
-│       ├── deepseek.py        # DeepSeek API client
-│       ├── gemini.py          # Gemini API client
-│       └── openai.py          # OpenAI-compatible API client
+│       └── openai.py          # OpenAI-compatible API client (base_url, model, api_key)
 ├── client/
 │   ├── login.py               # QR code login (qrcode_get, qrcode_poll)
 │   ├── senior.py              # Quiz APIs (category, captcha, question, answer)
@@ -48,7 +46,7 @@ bili-hardcore/
 | Type | Location | Example |
 |------|----------|---------|
 | New Bilibili API endpoint | `client/<domain>.py` | `client/senior.py` for quiz APIs |
-| New LLM provider | `tools/LLM/<provider>.py` | `tools/LLM/deepseek.py` |
+| New LLM provider | Configure in `tools/LLM/openai.py` | Add base_url + model via OpenAI-compatible format |
 | Utility / shared function | `tools/<name>.py` | `tools/bili_ticket.py` |
 | High-level workflow script | `scripts/<name>.py` | `scripts/start_senior.py` |
 | Config constants | `config/config.py` | `API_CONFIG`, `HEADERS`, `PROMPT` |
@@ -71,14 +69,14 @@ Imports use the package-relative form (`from tools.X import Y`), not absolute (`
 
 - **Files**: `snake_case.py`
 - **Functions**: `snake_case()` — e.g., `question_get()`, `captcha_submit()`
-- **Classes**: `PascalCase` — e.g., `QuizSession`, `DeepSeekAPI`, `GeminiAPI`
+- **Classes**: `PascalCase` — e.g., `QuizSession`, `OpenAIAPI`
 - **Constants**: `UPPER_SNAKE_CASE` at module level — e.g., `API_CONFIG`, `HEADERS`, `PROMPT`
-- **Config files** (JSON): `~/.bili-hardcore/<name>.json` — e.g., `gemini_key.json`, `openai_config.json`, `auth.json`
+- **Config files** (JSON): `~/.bili-hardcore/<name>.json` — e.g., `openai_config.json`, `auth.json`
 
 ---
 
 ## Common Mistakes
 
-- **Don't put business logic in `config/config.py`** — it runs interactive I/O (input/print) at module import time. Any import triggers the LLM selection prompt.
+- **Don't put business logic in `config/config.py`** — it runs interactive I/O (input/print) at module import time. Any import triggers the API config prompt.
 - **Don't create new `requests.Session()` instances** — use the shared `session` from `tools/request_b.py` which has retry configured.
 - **Don't hardcode Bilibili API URLs** — keep them in the `client/` layer functions where they already live.

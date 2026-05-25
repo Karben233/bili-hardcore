@@ -23,9 +23,9 @@ else:
 ```
 
 ```python
-# LLM wrapper pattern
+# LLM wrapper pattern (tools/LLM/openai.py)
 except requests.exceptions.RequestException as e:
-    raise Exception(f"DeepSeek API request failed: {str(e)}")
+    raise Exception(f"OpenAI API request failed: {str(e)}")
 ```
 
 ---
