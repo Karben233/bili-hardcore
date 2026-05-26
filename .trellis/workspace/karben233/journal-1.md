@@ -172,3 +172,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Config Buttons Vertical
+
+**Date**: 2026-05-26
+**Task**: Config Buttons Vertical
+**Branch**: `refactor`
+
+### Summary
+
+配置页和确认弹窗按钮从水平排列改为竖向排列
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1040088` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
