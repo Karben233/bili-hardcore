@@ -73,3 +73,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Python → Rust 重构：Ratatui TUI
+
+**Date**: 2026-05-26
+**Task**: Python → Rust 重构：Ratatui TUI
+**Branch**: `refactor`
+
+### Summary
+
+将 bili-hardcore 项目从 Python 完全重构为 Rust，使用 Ratatui 构建二级页面 TUI（首页/配置/答题），答题页左右分栏显示当前题目与历史记录，实现 QR 码登录、验证码处理、LLM 自动答题完整流程，修复 API 签名/Ticket/URL/UTF-8 截断等关键 bug，跨平台 GitHub Actions 构建配置。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0b840af` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
