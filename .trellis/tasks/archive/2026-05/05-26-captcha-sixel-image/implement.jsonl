@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/05-26-captcha-sixel-image/prd.md", "reason": "PRD with full requirements, technical approach, dependency versions, and acceptance criteria"}
+{"file": ".trellis/tasks/05-26-captcha-sixel-image/research/sixel-rust-terminal.md", "reason": "ratatui-image version compatibility, API usage, terminal support matrix, integration patterns"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Error handling patterns for image download failure fallback"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Quality bar for implementation"}
