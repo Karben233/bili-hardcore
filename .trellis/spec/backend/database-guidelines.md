@@ -6,7 +6,7 @@
 
 ## Overview
 
-This project has **no database**. All persistent data is stored as JSON files in the user's home directory under `~/.bili-hardcore/`. Bilibili API is the only external data source.
+This project has **no database**. All persistent data is stored as JSON files in `~/.bili-hardcore/`. Bilibili API is the only external data source.
 
 ---
 
@@ -20,24 +20,43 @@ This project has **no database**. All persistent data is stored as JSON files in
 └── openai_config.json     # OpenAI-compatible config (base_url, model, api_key)
 ```
 
+### Rust structs
+
+```rust
+// config.rs
+#[derive(Serialize, Deserialize)]
+pub struct OpenAiConfig {
+    pub base_url: String,
+    pub model: String,
+    pub api_key: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AuthData {
+    pub access_token: String,
+    pub csrf: String,
+    pub mid: String,
+    pub cookie: String,
+}
+```
+
 ### Read pattern
 
-```python
-# From config/config.py — load_openai_config()
-config_file = os.path.join(os.path.expanduser('~'), '.bili-hardcore', 'openai_config.json')
-if os.path.exists(config_file):
-    with open(config_file, 'r') as f:
-        data = json.load(f)
-        return data.get('base_url', ''), data.get('model', ''), data.get('api_key', '')
+```rust
+let path = dirs::home_dir().unwrap().join(".bili-hardcore").join("openai_config.json");
+if path.exists() {
+    let data = fs::read_to_string(&path)?;
+    let config: OpenAiConfig = serde_json::from_str(&data)?;
+}
 ```
 
 ### Write pattern
 
-```python
-# From config/config.py — save_openai_config()
-os.makedirs(os.path.dirname(config_file), exist_ok=True)
-with open(config_file, 'w') as f:
-    json.dump({'base_url': base_url, 'model': model, 'api_key': api_key}, f)
+```rust
+let dir = dirs::home_dir().unwrap().join(".bili-hardcore");
+fs::create_dir_all(&dir)?;
+let json = serde_json::to_string_pretty(&config)?;
+fs::write(dir.join("openai_config.json"), json)?;
 ```
 
 ---
@@ -47,19 +66,19 @@ with open(config_file, 'w') as f:
 - **Storage**: `~/.bili-hardcore/auth.json` with fields: `access_token`, `csrf`, `mid`, `cookie`
 - **Expiration**: 7 days (checked via file mtime, not token content)
 - **Refresh**: Re-login via QR code when expired or missing
-- **Cleanup**: `clear_config()` deletes entire `~/.bili-hardcore/` directory
+- **Cleanup**: Option to delete `~/.bili-hardcore/` directory from TUI
 
 ---
 
 ## Forbidden Patterns
 
 - **Don't store credentials in the repo** — all user-specific data goes to `~/.bili-hardcore/`
-- **Don't read/write config files without `try/except`** — file may be missing or corrupted
-- **Don't use pickle or binary formats** — JSON only for human readability
+- **Don't use binary formats** — JSON only for human readability
+- **Don't hardcode the home directory** — use `dirs::home_dir()` for cross-platform support
 
 ---
 
 ## Common Mistakes
 
-- Forgetting `os.makedirs(exist_ok=True)` before writing — will crash on first run
+- Forgetting `fs::create_dir_all()` before writing — will crash on first run
 - Checking auth token age by token content instead of file mtime — the current code checks file modification time

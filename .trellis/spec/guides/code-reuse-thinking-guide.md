@@ -1,6 +1,6 @@
 # Code Reuse Thinking Guide
 
-> **Purpose**: Stop and think before creating new code - does it already exist?
+> **Purpose**: Stop and think before creating new code — does it already exist?
 
 ---
 
@@ -21,10 +21,10 @@ When you copy-paste or rewrite existing logic:
 
 ```bash
 # Search for similar function names
-grep -r "functionName" .
+grep -rn "function_name" src/
 
 # Search for similar logic
-grep -r "keyword" .
+grep -rn "keyword" src/
 ```
 
 ### Step 2: Ask These Questions
@@ -33,30 +33,22 @@ grep -r "keyword" .
 |----------|-----------|
 | Does a similar function exist? | Use or extend it |
 | Is this pattern used elsewhere? | Follow the existing pattern |
-| Could this be a shared utility? | Create it in the right place |
-| Am I copying code from another file? | **STOP** - extract to shared |
+| Could this be a shared utility? | Create it in the right module |
+| Am I copying code from another file? | **STOP** — extract to shared |
 
 ---
 
-## Common Duplication Patterns
+## Common Duplication Patterns in This Project
 
-### Pattern 1: Copy-Paste Functions
+### Pattern 1: Bilibili API calls
 
-**Bad**: Copying a validation function to another file
+All API calls follow the same pattern: sign params → HTTP request → check code → extract data.
 
-**Good**: Extract to shared utilities, import where needed
+If adding a new endpoint, follow the existing pattern in `api/client.rs`.
 
-### Pattern 2: Similar Components
+### Pattern 2: Error conversion
 
-**Bad**: Creating a new component that's 80% similar to existing
-
-**Good**: Extend existing component with props/variants
-
-### Pattern 3: Repeated Constants
-
-**Bad**: Defining the same constant in multiple files
-
-**Good**: Single source of truth, import everywhere
+All Bilibili API responses convert to `AppError::Api`. Don't create new error variants when `AppError::Api` suffices.
 
 ---
 
@@ -65,35 +57,12 @@ grep -r "keyword" .
 **Abstract when**:
 - Same code appears 3+ times
 - Logic is complex enough to have bugs
-- Multiple people might need this
+- Multiple modules need this
 
 **Don't abstract when**:
 - Only used once
 - Trivial one-liner
 - Abstraction would be more complex than duplication
-
----
-
-## After Batch Modifications
-
-When you've made similar changes to multiple files:
-
-1. **Review**: Did you catch all instances?
-2. **Search**: Run grep to find any missed
-3. **Consider**: Should this be abstracted?
-
----
-
-## Gotcha: Asymmetric Mechanisms Producing Same Output
-
-**Problem**: When two different mechanisms must produce the same file set (e.g., recursive directory copy for init vs. manual `files.set()` for update), structural changes (renaming, moving, adding subdirectories) only propagate through the automatic mechanism. The manual one silently drifts.
-
-**Symptom**: Init works perfectly, but update creates files at wrong paths or misses files entirely.
-
-**Prevention checklist**:
-- [ ] When migrating directory structures, search for ALL code paths that reference the old structure
-- [ ] If one path is auto-derived (glob/copy) and another is manually listed, the manual one needs updating
-- [ ] Add a regression test that compares outputs from both mechanisms
 
 ---
 

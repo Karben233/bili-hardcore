@@ -106,7 +106,7 @@ pub fn delete_auth() -> Result<()> {
     Ok(())
 }
 
-/// LLM prompt 模板（对齐 Python 版本）
+/// LLM prompt 模板
 pub const QUIZ_PROMPT_TEMPLATE: &str = "\
 当前时间：{}
 你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：

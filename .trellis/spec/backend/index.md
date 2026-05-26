@@ -6,7 +6,7 @@
 
 ## Overview
 
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+This directory contains guidelines for the Rust backend. The project is a TUI application using ratatui + crossterm, with async runtime via tokio.
 
 ---
 
@@ -16,9 +16,9 @@ This directory contains guidelines for backend development. Fill in each file wi
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | Filled |
 | [Storage Guidelines](./database-guidelines.md) | JSON file storage, auth token lifecycle | Filled |
-| [Error Handling](./error-handling.md) | Error types, handling strategies, API codes | Filled |
+| [Error Handling](./error-handling.md) | AppError enum, handling strategies, API codes | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns, tech debt | Filled |
-| [Logging Guidelines](./logging-guidelines.md) | Logger setup, log levels, format | Filled |
+| [Logging Guidelines](./logging-guidelines.md) | tracing setup, log levels, format | Filled |
 
 ---
 
@@ -32,7 +32,3 @@ For each guideline file:
 4. Add **common mistakes** your team has made
 
 The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.

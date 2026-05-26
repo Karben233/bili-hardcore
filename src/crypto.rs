@@ -7,8 +7,7 @@ type HmacSha256 = Hmac<sha2::Sha256>;
 const APPKEY: &str = "783bbb7264451d82";
 const APPSEC: &str = "2653583c8873dea268ab9386918b1d65";
 
-/// 模拟 Python urllib.parse.urlencode 的行为
-/// 使用 quote_plus 风格编码（空格变为 +），但我们的参数不含空格
+/// URL 编码参数，使用 quote_plus 风格（空格变为 +），但参数不含空格
 fn urlencode_params(params: &[(String, String)]) -> String {
     params
         .iter()
@@ -17,7 +16,7 @@ fn urlencode_params(params: &[(String, String)]) -> String {
         .join("&")
 }
 
-/// B站 API 参数签名（对齐 Python 版本的 appsign 函数）
+/// B站 API 参数签名（appsign）
 /// 1. 添加 ts 时间戳 + appkey
 /// 2. 按 key 排序
 /// 3. urlencode 拼接
@@ -43,7 +42,7 @@ pub fn appsign(params: &mut Vec<(String, String)>) {
     params.push(("sign".into(), sign));
 }
 
-/// HMAC-SHA256 签名（对齐 Python 版本的 hmac_sha256 函数）
+/// HMAC-SHA256 签名
 pub fn hmac_sha256(key: &str, message: &str) -> String {
     let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC key length valid");
     mac.update(message.as_bytes());

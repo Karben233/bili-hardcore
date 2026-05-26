@@ -32,7 +32,6 @@ impl OpenAiClient {
             .replace("{}", &ts.to_string())
             .replacen("{}", question, 1);
 
-        // 对齐 Python 版本的所有参数
         let body = serde_json::json!({
             "model": self.model,
             "enable_thinking": false,
