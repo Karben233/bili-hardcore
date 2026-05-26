@@ -87,7 +87,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
             f.render_widget(
                 Paragraph::new(qr.as_str())
-                    .style(Style::default().fg(Color::Black))
+                    .style(Style::default().fg(Color::White))
                     .alignment(Alignment::Center),
                 chunks[1],
             );
@@ -419,7 +419,7 @@ fn draw_captcha(
 
     let chunks = Layout::vertical([
         Constraint::Length(2),
-        Constraint::Min(7),
+        Constraint::Min(8),
         Constraint::Length(image_height),
         Constraint::Min(3),
         Constraint::Length(2),
@@ -468,14 +468,13 @@ fn draw_captcha(
                 f.render_widget(ratatui_image::Image::new(&protocol), img_layout[0]);
             }
 
-            // Always show URL as fallback
             let link_text = format!(
                 "如果验证码没有正常显示，请打开链接查看: {}",
                 cs.captcha_url
             );
             f.render_widget(
                 Paragraph::new(link_text)
-                    .style(Style::default().fg(Color::Cyan))
+                    .style(Style::default().fg(Color::DarkGray))
                     .wrap(Wrap { trim: true }),
                 img_layout[1],
             );
@@ -487,7 +486,7 @@ fn draw_captcha(
             );
             f.render_widget(
                 Paragraph::new(link_text)
-                    .style(Style::default().fg(Color::Cyan))
+                    .style(Style::default().fg(Color::DarkGray))
                     .wrap(Wrap { trim: true }),
                 chunks[2],
             );

@@ -297,23 +297,23 @@ impl App {
         } = &self.phase
         {
             if *countdown > 0 {
-                let new_cd = *countdown - 1;
                 let ac = auth_code.clone();
                 let url = match &self.phase {
                     QuizPhase::WaitingScan { url, qr, .. } => (url.clone(), qr.clone()),
                     _ => unreachable!(),
                 };
-                self.phase = QuizPhase::WaitingScan {
-                    url: url.0,
-                    qr: url.1,
-                    auth_code: ac.clone(),
-                    countdown: new_cd,
-                };
 
                 self.qr_poll_tick += 1;
                 if self.qr_poll_tick >= 10 {
-                    // 每 ~1秒轮询一次 (tick_rate 100ms)
+                    // 每 ~1秒递减 countdown 并轮询 (tick_rate 100ms)
                     self.qr_poll_tick = 0;
+                    let new_cd = *countdown - 1;
+                    self.phase = QuizPhase::WaitingScan {
+                        url: url.0,
+                        qr: url.1,
+                        auth_code: ac.clone(),
+                        countdown: new_cd,
+                    };
                     self.poll_qr(&ac);
                 }
             } else {
@@ -658,7 +658,7 @@ impl App {
                     url,
                     qr,
                     auth_code,
-                    countdown: 600,
+                    countdown: 60,
                 };
             }
             AppEvent::LoginOk(auth) => {
