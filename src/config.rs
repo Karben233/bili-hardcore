@@ -26,11 +26,11 @@ fn config_dir() -> PathBuf {
         .join(CONFIG_DIR_NAME)
 }
 
-fn openai_config_path() -> PathBuf {
+pub fn openai_config_path() -> PathBuf {
     config_dir().join("openai_config.json")
 }
 
-fn auth_path() -> PathBuf {
+pub fn auth_path() -> PathBuf {
     config_dir().join("auth.json")
 }
 
@@ -87,6 +87,22 @@ pub fn save_auth(auth: &AuthData) -> Result<()> {
     let path = auth_path();
     let content = serde_json::to_string_pretty(auth).context("序列化认证信息失败")?;
     fs::write(&path, content).context("写入认证信息失败")?;
+    Ok(())
+}
+
+pub fn delete_openai_config() -> Result<()> {
+    let path = openai_config_path();
+    if path.exists() {
+        fs::remove_file(path).context("删除 API 配置失败")?;
+    }
+    Ok(())
+}
+
+pub fn delete_auth() -> Result<()> {
+    let path = auth_path();
+    if path.exists() {
+        fs::remove_file(path).context("删除认证信息失败")?;
+    }
     Ok(())
 }
 

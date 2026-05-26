@@ -39,22 +39,54 @@ impl App {
     }
 
     fn key_config(&mut self, code: KeyCode) {
+        // Handle confirmation dialog when active
+        if self.config_confirm_reset {
+            match code {
+                KeyCode::Left | KeyCode::Up => {
+                    self.config_reset_choice = false;
+                }
+                KeyCode::Right | KeyCode::Down => {
+                    self.config_reset_choice = true;
+                }
+                KeyCode::Enter => {
+                    if self.config_reset_choice {
+                        self.reset_all();
+                    } else {
+                        self.config_confirm_reset = false;
+                    }
+                }
+                KeyCode::Esc => {
+                    self.config_confirm_reset = false;
+                }
+                _ => {}
+            }
+            return;
+        }
+
         let field_idx = match self.cfg_focus {
             ConfigFocus::BaseUrl => Some(0),
             ConfigFocus::Model => Some(1),
             ConfigFocus::ApiKey => Some(2),
-            ConfigFocus::SaveBtn => None,
+            ConfigFocus::SaveBtn | ConfigFocus::ResetBtn => None,
         };
 
         match code {
             KeyCode::Esc => self.back(),
-            KeyCode::Enter => self.save_config(),
+            KeyCode::Enter => match self.cfg_focus {
+                ConfigFocus::SaveBtn => self.save_config(),
+                ConfigFocus::ResetBtn => {
+                    self.config_confirm_reset = true;
+                    self.config_reset_choice = false;
+                }
+                _ => {}
+            },
             KeyCode::Tab => {
                 self.cfg_focus = match self.cfg_focus {
                     ConfigFocus::BaseUrl => ConfigFocus::Model,
                     ConfigFocus::Model => ConfigFocus::ApiKey,
                     ConfigFocus::ApiKey => ConfigFocus::SaveBtn,
-                    ConfigFocus::SaveBtn => ConfigFocus::BaseUrl,
+                    ConfigFocus::SaveBtn => ConfigFocus::ResetBtn,
+                    ConfigFocus::ResetBtn => ConfigFocus::BaseUrl,
                 };
             }
             KeyCode::Backspace => {
@@ -85,15 +117,17 @@ impl App {
                     ConfigFocus::BaseUrl => ConfigFocus::Model,
                     ConfigFocus::Model => ConfigFocus::ApiKey,
                     ConfigFocus::ApiKey => ConfigFocus::SaveBtn,
-                    ConfigFocus::SaveBtn => ConfigFocus::BaseUrl,
+                    ConfigFocus::SaveBtn => ConfigFocus::ResetBtn,
+                    ConfigFocus::ResetBtn => ConfigFocus::BaseUrl,
                 };
             }
             KeyCode::Up => {
                 self.cfg_focus = match self.cfg_focus {
-                    ConfigFocus::BaseUrl => ConfigFocus::SaveBtn,
+                    ConfigFocus::BaseUrl => ConfigFocus::ResetBtn,
                     ConfigFocus::Model => ConfigFocus::BaseUrl,
                     ConfigFocus::ApiKey => ConfigFocus::Model,
                     ConfigFocus::SaveBtn => ConfigFocus::ApiKey,
+                    ConfigFocus::ResetBtn => ConfigFocus::SaveBtn,
                 };
             }
             KeyCode::Char(c) => {

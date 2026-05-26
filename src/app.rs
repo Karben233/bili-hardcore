@@ -24,6 +24,7 @@ pub enum ConfigFocus {
     Model,
     ApiKey,
     SaveBtn,
+    ResetBtn,
 }
 
 #[derive(Debug, Clone)]
@@ -156,6 +157,8 @@ pub struct App {
     pub cfg_fields: [String; 3],
     pub cfg_focus: ConfigFocus,
     pub cfg_cursors: [usize; 3],
+    pub config_confirm_reset: bool,
+    pub config_reset_choice: bool,
 
     // Quiz state
     pub phase: QuizPhase,
@@ -231,6 +234,8 @@ impl App {
             ],
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
+            config_confirm_reset: false,
+            config_reset_choice: false,
             phase: QuizPhase::NotConfigured,
             score: 0,
             question_id: 0,
@@ -262,6 +267,19 @@ impl App {
         if let Some(p) = self.prev_page.pop() {
             self.page = p;
         }
+    }
+
+    pub fn reset_all(&mut self) {
+        let _ = config::delete_openai_config();
+        let _ = config::delete_auth();
+        self.config = None;
+        self.auth = None;
+        self.bili = BiliClient::new();
+        self.cfg_fields = [String::new(), String::new(), String::new()];
+        self.cfg_cursors = [0, 0, 0];
+        self.config_confirm_reset = false;
+        self.config_reset_choice = false;
+        self.back();
     }
 
     pub fn spin_char(&self) -> char {
