@@ -788,11 +788,12 @@ fn parse_answer(s: &str) -> Option<usize> {
 
 fn make_qr(url: &str) -> String {
     use qrcode::QrCode;
+    use qrcode::render::unicode::Dense1x2;
     match QrCode::new(url.as_bytes()) {
         Ok(code) => code
-            .render::<char>()
+            .render::<Dense1x2>()
             .quiet_zone(false)
-            .module_dimensions(2, 1)
+            .module_dimensions(1, 1)
             .build(),
         Err(_) => "QR generation failed".into(),
     }
