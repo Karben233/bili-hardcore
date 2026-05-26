@@ -47,6 +47,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Constraint::Length(3),
         Constraint::Length(1),
         Constraint::Length(2),
+        Constraint::Length(2),
         Constraint::Length(1),
     ])
     .split(inner);
@@ -90,13 +91,6 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         );
     }
 
-    // Buttons row: save and reset side by side
-    let btn_layout = Layout::horizontal([
-        Constraint::Percentage(50),
-        Constraint::Percentage(50),
-    ])
-    .split(chunks[5]);
-
     let save_color = if app.cfg_focus == ConfigFocus::SaveBtn {
         selected_style(Color::Green)
     } else {
@@ -106,7 +100,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new("[ 保存 ]")
             .style(save_color)
             .alignment(Alignment::Center),
-        btn_layout[0],
+        chunks[5],
     );
 
     let reset_color = if app.cfg_focus == ConfigFocus::ResetBtn {
@@ -118,14 +112,14 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new("[ 重置 ]")
             .style(reset_color)
             .alignment(Alignment::Center),
-        btn_layout[1],
+        chunks[6],
     );
 
     f.render_widget(
         Paragraph::new("Tab/↑↓ 切换  Enter 确认  ESC 返回")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
-        chunks[6],
+        chunks[7],
     );
 }
 
@@ -169,13 +163,6 @@ fn draw_reset_confirm(
         chunks[2],
     );
 
-    // Buttons row: cancel and confirm side by side
-    let btn_layout = Layout::horizontal([
-        Constraint::Percentage(50),
-        Constraint::Percentage(50),
-    ])
-    .split(chunks[3]);
-
     f.render_widget(
         Paragraph::new("[ 取消 ]")
             .style(if !confirm {
@@ -184,7 +171,7 @@ fn draw_reset_confirm(
                 dim_style(Color::DarkGray)
             })
             .alignment(Alignment::Center),
-        btn_layout[0],
+        chunks[3],
     );
 
     f.render_widget(
@@ -195,7 +182,7 @@ fn draw_reset_confirm(
                 dim_style(Color::DarkGray)
             })
             .alignment(Alignment::Center),
-        btn_layout[1],
+        chunks[4],
     );
 
     f.render_widget(
