@@ -1,0 +1,32 @@
+[package]
+name = "bili-hardcore"
+version = "0.1.0"
+edition = "2024"
+description = "B站硬核会员自动答题工具"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+futures = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip", "deflate", "brotli"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+qrcode = "0.14"
+md-5 = "0.10"
+hmac = "0.12"
+sha2 = "0.10"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "6"
+urlencoding = "2"
+unicode-width = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
