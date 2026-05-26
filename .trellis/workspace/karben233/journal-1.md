@@ -139,3 +139,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Config Reset Button
+
+**Date**: 2026-05-26
+**Task**: Config Reset Button
+**Branch**: `refactor`
+
+### Summary
+
+配置页添加重置按钮，五焦点循环导航，确认弹窗防误操作，重置后清空配置和登录状态返回首页
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2bfaaac` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

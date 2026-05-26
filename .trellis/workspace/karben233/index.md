@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
+- **Total Sessions**: 5
 - **Last Active**: 2026-05-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~141 | Active |
+| `journal-1.md` | ~174 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-05-26 | Config Reset Button | `2bfaaac` | `refactor` |
 | 4 | 2026-05-26 | Captcha Sixel Image + Submit Button | `1232719` | `refactor` |
 | 3 | 2026-05-26 | Python → Rust 重构：Ratatui TUI | `0b840af` | `refactor` |
 | 2 | 2026-05-25 | Refactor: 简化 API provider 为仅 OpenAI 兼容格式 | `3d11eb5`, `6b267ef` | `refactor` |
