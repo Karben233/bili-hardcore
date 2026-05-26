@@ -58,6 +58,7 @@ pub enum CaptchaFocus {
     Categories,
     Input,
     Submit,
+    OpenBrowser,
 }
 
 #[derive(Debug, Clone)]
@@ -158,7 +159,7 @@ pub struct App {
     pub cfg_focus: ConfigFocus,
     pub cfg_cursors: [usize; 3],
     pub config_confirm_reset: bool,
-    pub config_reset_choice: bool,
+    pub config_reset_choice: u8,
 
     // Quiz state
     pub phase: QuizPhase,
@@ -235,7 +236,7 @@ impl App {
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
             config_confirm_reset: false,
-            config_reset_choice: false,
+            config_reset_choice: 0,
             phase: QuizPhase::NotConfigured,
             score: 0,
             question_id: 0,
@@ -278,7 +279,16 @@ impl App {
         self.cfg_fields = [String::new(), String::new(), String::new()];
         self.cfg_cursors = [0, 0, 0];
         self.config_confirm_reset = false;
-        self.config_reset_choice = false;
+        self.config_reset_choice = 0;
+        self.back();
+    }
+
+    pub fn logout_only(&mut self) {
+        let _ = config::delete_auth();
+        self.auth = None;
+        self.bili = BiliClient::new();
+        self.config_confirm_reset = false;
+        self.config_reset_choice = 0;
         self.back();
     }
 

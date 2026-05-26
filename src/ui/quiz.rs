@@ -64,12 +64,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         }
 
         QuizPhase::WaitingScan {
-            url, qr, countdown, ..
+            qr, countdown, ..
         } => {
             let chunks = Layout::vertical([
                 Constraint::Length(2),
                 Constraint::Min(6),
-                Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
             ])
@@ -98,17 +97,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 chunks[2],
             );
             f.render_widget(
-                Paragraph::new(format!("备用链接: {}", url))
+                Paragraph::new("B 浏览器打开二维码  ESC 返回")
                     .style(Style::default().fg(Color::DarkGray))
-                    .wrap(Wrap { trim: true })
                     .alignment(Alignment::Center),
                 chunks[3],
-            );
-            f.render_widget(
-                Paragraph::new("如二维码无法显示，请用浏览器打开上方链接生成二维码")
-                    .style(Style::default().fg(Color::DarkGray))
-                    .alignment(Alignment::Center),
-                chunks[4],
             );
         }
 
@@ -411,7 +403,7 @@ fn draw_captcha(
     use ratatui::{
         layout::{Alignment, Constraint, Layout},
         style::{Color, Style},
-        widgets::{Block, Borders, Paragraph, Wrap},
+        widgets::{Block, Borders, Paragraph},
     };
 
     let has_image = picker.is_some() && img.is_some();
@@ -468,26 +460,28 @@ fn draw_captcha(
                 f.render_widget(ratatui_image::Image::new(&protocol), img_layout[0]);
             }
 
-            let link_text = format!(
-                "如果验证码没有正常显示，请打开链接查看: {}",
-                cs.captcha_url
-            );
+            let browser_style = if matches!(cs.focus, CaptchaFocus::OpenBrowser) {
+                selected_style(Color::Cyan)
+            } else {
+                dim_style(Color::DarkGray)
+            };
             f.render_widget(
-                Paragraph::new(link_text)
-                    .style(Style::default().fg(Color::DarkGray))
-                    .wrap(Wrap { trim: true }),
+                Paragraph::new("[ 使用浏览器打开验证码 ]")
+                    .style(browser_style)
+                    .alignment(Alignment::Center),
                 img_layout[1],
             );
         }
         _ => {
-            let link_text = format!(
-                "如果验证码没有正常显示，请打开链接查看: {}",
-                cs.captcha_url
-            );
+            let browser_style = if matches!(cs.focus, CaptchaFocus::OpenBrowser) {
+                selected_style(Color::Cyan)
+            } else {
+                dim_style(Color::DarkGray)
+            };
             f.render_widget(
-                Paragraph::new(link_text)
-                    .style(Style::default().fg(Color::DarkGray))
-                    .wrap(Wrap { trim: true }),
+                Paragraph::new("[ 使用浏览器打开验证码 ]")
+                    .style(browser_style)
+                    .alignment(Alignment::Center),
                 chunks[2],
             );
         }

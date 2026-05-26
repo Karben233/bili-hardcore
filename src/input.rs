@@ -43,16 +43,16 @@ impl App {
         if self.config_confirm_reset {
             match code {
                 KeyCode::Left | KeyCode::Up => {
-                    self.config_reset_choice = false;
+                    self.config_reset_choice = self.config_reset_choice.saturating_sub(1);
                 }
                 KeyCode::Right | KeyCode::Down => {
-                    self.config_reset_choice = true;
+                    self.config_reset_choice = (self.config_reset_choice + 1).min(2);
                 }
                 KeyCode::Enter => {
-                    if self.config_reset_choice {
-                        self.reset_all();
-                    } else {
-                        self.config_confirm_reset = false;
+                    match self.config_reset_choice {
+                        0 => self.config_confirm_reset = false,
+                        1 => self.logout_only(),
+                        _ => self.reset_all(),
                     }
                 }
                 KeyCode::Esc => {
@@ -76,7 +76,7 @@ impl App {
                 ConfigFocus::SaveBtn => self.save_config(),
                 ConfigFocus::ResetBtn => {
                     self.config_confirm_reset = true;
-                    self.config_reset_choice = false;
+                    self.config_reset_choice = 0;
                 }
                 _ => {}
             },
@@ -164,6 +164,17 @@ impl App {
                 }
                 _ => {}
             },
+            QuizPhase::WaitingScan { url, .. } => match code {
+                KeyCode::Char('b') | KeyCode::Char('B') => {
+                    let qr_url = format!(
+                        "https://api.cl2wm.cn/api/qrcode/code?text={}",
+                        urlencoding::encode(url)
+                    );
+                    let _ = webbrowser::open(&qr_url);
+                }
+                KeyCode::Esc => self.back(),
+                _ => {}
+            },
             QuizPhase::Captcha(_) => self.key_captcha(code),
             QuizPhase::Finished { .. } | QuizPhase::Error(_) => {
                 if matches!(code, KeyCode::Enter | KeyCode::Esc) {
@@ -195,7 +206,8 @@ impl App {
             }
             KeyCode::Tab => CaptchaState {
                 focus: match cs.focus {
-                    CaptchaFocus::Categories => CaptchaFocus::Input,
+                    CaptchaFocus::Categories => CaptchaFocus::OpenBrowser,
+                    CaptchaFocus::OpenBrowser => CaptchaFocus::Input,
                     CaptchaFocus::Input => CaptchaFocus::Submit,
                     CaptchaFocus::Submit => CaptchaFocus::Categories,
                 },
@@ -210,8 +222,13 @@ impl App {
                     ..cs
                 }
             }
-            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Input) => CaptchaState {
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::OpenBrowser) => CaptchaState {
                 focus: CaptchaFocus::Categories,
+                error: String::new(),
+                ..cs
+            },
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Input) => CaptchaState {
+                focus: CaptchaFocus::OpenBrowser,
                 error: String::new(),
                 ..cs
             },
@@ -232,6 +249,11 @@ impl App {
                 }
             }
             KeyCode::Down if matches!(cs.focus, CaptchaFocus::Categories) => CaptchaState {
+                focus: CaptchaFocus::OpenBrowser,
+                error: String::new(),
+                ..cs
+            },
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::OpenBrowser) => CaptchaState {
                 focus: CaptchaFocus::Input,
                 error: String::new(),
                 ..cs
@@ -241,8 +263,13 @@ impl App {
                 error: String::new(),
                 ..cs
             },
-            // Down on Submit: stay on Submit
-            KeyCode::Down if matches!(cs.focus, CaptchaFocus::Submit) => cs,
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::Submit) => CaptchaState {
+                focus: CaptchaFocus::OpenBrowser,
+                error: String::new(),
+                ..cs
+            },
+            // Down on OpenBrowser: stay
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::OpenBrowser) => cs,
             // Space toggles category selection (only in Categories focus)
             KeyCode::Char(' ') if matches!(cs.focus, CaptchaFocus::Categories) => {
                 let count = cs.categories.iter().filter(|c| c.selected).count();
@@ -300,7 +327,12 @@ impl App {
                     return;
                 }
             }
-            // Enter on non-Submit: do nothing
+            // Enter on OpenBrowser: open captcha in browser
+            KeyCode::Enter if matches!(cs.focus, CaptchaFocus::OpenBrowser) => {
+                let _ = webbrowser::open(&cs.captcha_url);
+                cs
+            }
+            // Enter on non-Submit/OpenBrowser: do nothing
             KeyCode::Enter => cs,
             _ => cs,
         };

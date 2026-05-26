@@ -126,7 +126,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 fn draw_reset_confirm(
     f: &mut ratatui::Frame,
     area: ratatui::layout::Rect,
-    confirm: bool,
+    choice: u8,
 ) {
     use ratatui::{
         layout::{Alignment, Constraint, Layout},
@@ -138,6 +138,7 @@ fn draw_reset_confirm(
         Constraint::Percentage(30),
         Constraint::Length(2),
         Constraint::Length(1),
+        Constraint::Length(2),
         Constraint::Length(2),
         Constraint::Length(2),
         Constraint::Length(1),
@@ -165,7 +166,7 @@ fn draw_reset_confirm(
 
     f.render_widget(
         Paragraph::new("[ 取消 ]")
-            .style(if !confirm {
+            .style(if choice == 0 {
                 selected_style(Color::Green)
             } else {
                 dim_style(Color::DarkGray)
@@ -175,9 +176,9 @@ fn draw_reset_confirm(
     );
 
     f.render_widget(
-        Paragraph::new("[ 确认重置 ]")
-            .style(if confirm {
-                selected_style(Color::Red)
+        Paragraph::new("[ 仅退出登录 ]")
+            .style(if choice == 1 {
+                selected_style(Color::Yellow)
             } else {
                 dim_style(Color::DarkGray)
             })
@@ -186,9 +187,20 @@ fn draw_reset_confirm(
     );
 
     f.render_widget(
-        Paragraph::new("←→ 选择  Enter 确认  ESC 取消")
-            .style(Style::default().fg(Color::DarkGray))
+        Paragraph::new("[ 确认重置 ]")
+            .style(if choice == 2 {
+                selected_style(Color::Red)
+            } else {
+                dim_style(Color::DarkGray)
+            })
             .alignment(Alignment::Center),
         chunks[5],
+    );
+
+    f.render_widget(
+        Paragraph::new("↑↓ 选择  Enter 确认  ESC 取消")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center),
+        chunks[6],
     );
 }

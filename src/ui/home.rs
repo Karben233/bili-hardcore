@@ -34,7 +34,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     f.render_widget(title, chunks[0]);
 
     let intro = Paragraph::new(
-        "本软件免费且代码开源\n源码 & 问题反馈: https://github.com/Karben233/bili-hardcore",
+        "本程序从未在任何地方出售\n问题反馈: https://github.com/Karben233/bili-hardcore/issues\n如遇到二维码等内容显示不全，请尝试调整终端窗口大小",
     )
     .style(Style::default().fg(Color::DarkGray))
     .alignment(Alignment::Center)

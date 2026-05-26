@@ -27,6 +27,7 @@ urlencoding = "2"
 unicode-width = "0.2"
 ratatui-image = { version = "9", default-features = false, features = ["image-defaults", "crossterm"] }
 image = "0.25"
+webbrowser = "1"
 
 [profile.release]
 opt-level = "s"
