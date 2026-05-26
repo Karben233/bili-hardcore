@@ -61,10 +61,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
     crossterm::execute!(stdout, EnterAlternateScreen)?;
+
+    let captcha_picker = ratatui_image::picker::Picker::from_query_stdio().ok();
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(cli_config);
+    let mut app = App::new(cli_config, captcha_picker);
     let result = run_app(&mut terminal, &mut app).await;
 
     // Restore terminal

@@ -2,6 +2,8 @@ use crate::app::*;
 use crate::config::OpenAiConfig;
 use crossterm::event::KeyCode;
 
+use crate::app::CaptchaFocus;
+
 impl App {
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) {
         match self.page {
@@ -158,30 +160,57 @@ impl App {
                 return;
             }
             KeyCode::Tab => CaptchaState {
-                input_focused: !cs.input_focused,
+                focus: match cs.focus {
+                    CaptchaFocus::Categories => CaptchaFocus::Input,
+                    CaptchaFocus::Input => CaptchaFocus::Submit,
+                    CaptchaFocus::Submit => CaptchaFocus::Categories,
+                },
+                error: String::new(),
                 ..cs
             },
-            KeyCode::Up if !cs.input_focused && cs.cat_focus > 0 => CaptchaState {
-                cat_focus: cs.cat_focus - 1,
-                ..cs
-            },
-            KeyCode::Down
-                if !cs.input_focused && cs.cat_focus < cs.categories.len().saturating_sub(1) =>
-            {
+            // Up arrow navigation
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Categories) && cs.cat_focus > 0 => {
                 CaptchaState {
-                    cat_focus: cs.cat_focus + 1,
+                    cat_focus: cs.cat_focus - 1,
+                    error: String::new(),
                     ..cs
                 }
             }
-            KeyCode::Down if !cs.input_focused => CaptchaState {
-                input_focused: true,
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Input) => CaptchaState {
+                focus: CaptchaFocus::Categories,
+                error: String::new(),
                 ..cs
             },
-            KeyCode::Up if cs.input_focused => CaptchaState {
-                input_focused: false,
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Submit) => CaptchaState {
+                focus: CaptchaFocus::Input,
+                error: String::new(),
                 ..cs
             },
-            KeyCode::Char(' ') if !cs.input_focused => {
+            // Down arrow navigation
+            KeyCode::Down
+                if matches!(cs.focus, CaptchaFocus::Categories)
+                    && cs.cat_focus < cs.categories.len().saturating_sub(1) =>
+            {
+                CaptchaState {
+                    cat_focus: cs.cat_focus + 1,
+                    error: String::new(),
+                    ..cs
+                }
+            }
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::Categories) => CaptchaState {
+                focus: CaptchaFocus::Input,
+                error: String::new(),
+                ..cs
+            },
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::Input) => CaptchaState {
+                focus: CaptchaFocus::Submit,
+                error: String::new(),
+                ..cs
+            },
+            // Down on Submit: stay on Submit
+            KeyCode::Down if matches!(cs.focus, CaptchaFocus::Submit) => cs,
+            // Space toggles category selection (only in Categories focus)
+            KeyCode::Char(' ') if matches!(cs.focus, CaptchaFocus::Categories) => {
                 let count = cs.categories.iter().filter(|c| c.selected).count();
                 let mut cats = cs.categories;
                 if cs.cat_focus < cats.len() {
@@ -193,20 +222,31 @@ impl App {
                 }
                 CaptchaState {
                     categories: cats,
+                    error: String::new(),
                     ..cs
                 }
             }
-            KeyCode::Char(c) if cs.input_focused => {
+            // Refresh captcha (only when NOT in Input focus)
+            KeyCode::Char('r') if !matches!(cs.focus, CaptchaFocus::Input) => {
+                self.captcha_image = None;
+                self.spawn_fetch_captcha();
+                self.phase = QuizPhase::FetchingQuestion;
+                return;
+            }
+            // Character input (only in Input focus)
+            KeyCode::Char(c) if matches!(cs.focus, CaptchaFocus::Input) => {
                 let mut input = cs.input;
                 input.push(c);
-                CaptchaState { input, ..cs }
+                CaptchaState { input, error: String::new(), ..cs }
             }
-            KeyCode::Backspace if cs.input_focused => {
+            // Backspace (only in Input focus)
+            KeyCode::Backspace if matches!(cs.focus, CaptchaFocus::Input) => {
                 let mut input = cs.input;
                 input.pop();
-                CaptchaState { input, ..cs }
+                CaptchaState { input, error: String::new(), ..cs }
             }
-            KeyCode::Enter => {
+            // Enter on Submit: try to submit with error feedback
+            KeyCode::Enter if matches!(cs.focus, CaptchaFocus::Submit) => {
                 let ids: String = cs
                     .categories
                     .iter()
@@ -214,13 +254,20 @@ impl App {
                     .map(|c| c.id.to_string())
                     .collect::<Vec<_>>()
                     .join(",");
-                if !cs.input.is_empty() && !ids.is_empty() {
+                if cs.input.is_empty() && ids.is_empty() {
+                    CaptchaState { error: "请选择分类并输入验证码".into(), ..cs }
+                } else if cs.input.is_empty() {
+                    CaptchaState { error: "请输入验证码".into(), ..cs }
+                } else if ids.is_empty() {
+                    CaptchaState { error: "请选择分类".into(), ..cs }
+                } else {
                     self.spawn_captcha_submit(&cs.input, &cs.captcha_token, &ids);
                     self.phase = QuizPhase::FetchingQuestion;
                     return;
                 }
-                cs
             }
+            // Enter on non-Submit: do nothing
+            KeyCode::Enter => cs,
             _ => cs,
         };
 

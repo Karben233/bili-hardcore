@@ -1,4 +1,4 @@
-use crate::app::{App, CaptchaState, QuizPhase};
+use crate::app::{App, CaptchaFocus, CaptchaState, QuizPhase};
 use ratatui::style::{Color, Modifier, Style};
 
 /// 选中按钮样式：亮色文字 + 加粗
@@ -313,7 +313,13 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         }
 
         QuizPhase::Captcha(cs) => {
-            draw_captcha(f, inner, cs);
+            draw_captcha(
+                f,
+                inner,
+                cs,
+                app.captcha_picker.as_ref(),
+                app.captcha_image.as_ref(),
+            );
         }
 
         QuizPhase::Finished { score, scores } => {
@@ -395,18 +401,27 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     }
 }
 
-fn draw_captcha(f: &mut ratatui::Frame, area: ratatui::layout::Rect, cs: &CaptchaState) {
+fn draw_captcha(
+    f: &mut ratatui::Frame,
+    area: ratatui::layout::Rect,
+    cs: &CaptchaState,
+    picker: Option<&ratatui_image::picker::Picker>,
+    img: Option<&image::DynamicImage>,
+) {
     use ratatui::{
         layout::{Alignment, Constraint, Layout},
         style::{Color, Style},
         widgets::{Block, Borders, Paragraph, Wrap},
     };
 
+    let has_image = picker.is_some() && img.is_some();
+    let image_height = if has_image { 12 } else { 2 };
+
     let chunks = Layout::vertical([
         Constraint::Length(2),
-        Constraint::Min(4),
-        Constraint::Length(2),
-        Constraint::Length(3),
+        Constraint::Min(7),
+        Constraint::Length(image_height),
+        Constraint::Min(3),
         Constraint::Length(2),
         Constraint::Length(1),
     ])
@@ -422,29 +437,67 @@ fn draw_captcha(f: &mut ratatui::Frame, area: ratatui::layout::Rect, cs: &Captch
     let mut cat_text = String::new();
     for (i, cat) in cs.categories.iter().enumerate() {
         let check = if cat.selected { "☑" } else { "☐" };
-        let marker = if !cs.input_focused && i == cs.cat_focus {
+        let marker = if matches!(cs.focus, CaptchaFocus::Categories) && i == cs.cat_focus {
             " >"
         } else {
             "  "
         };
         cat_text.push_str(&format!("{}{} {}. {}\n", marker, check, cat.id, cat.name));
     }
+    let cat_style = if matches!(cs.focus, CaptchaFocus::Categories) {
+        Style::default().fg(Color::White)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
     f.render_widget(
-        Paragraph::new(cat_text).style(Style::default().fg(Color::White)),
+        Paragraph::new(cat_text).style(cat_style),
         chunks[1],
     );
 
-    f.render_widget(
-        Paragraph::new(format!("请打开链接查看验证码: {}", cs.captcha_url))
-            .style(Style::default().fg(Color::Cyan))
-            .wrap(Wrap { trim: true }),
-        chunks[2],
-    );
+    match (picker, img) {
+        (Some(p), Some(dyn_img)) => {
+            // Two-part layout in image area: image on top (Min), URL text below (Length 2)
+            let img_layout = Layout::vertical([
+                Constraint::Min(1),
+                Constraint::Length(2),
+            ])
+            .split(chunks[2]);
+
+            // Try rendering the image; if it fails, just skip (URL is shown below anyway)
+            if let Ok(protocol) = p.new_protocol(dyn_img.clone(), img_layout[0], ratatui_image::Resize::Fit(None)) {
+                f.render_widget(ratatui_image::Image::new(&protocol), img_layout[0]);
+            }
+
+            // Always show URL as fallback
+            let link_text = format!(
+                "如果验证码没有正常显示，请打开链接查看: {}",
+                cs.captcha_url
+            );
+            f.render_widget(
+                Paragraph::new(link_text)
+                    .style(Style::default().fg(Color::Cyan))
+                    .wrap(Wrap { trim: true }),
+                img_layout[1],
+            );
+        }
+        _ => {
+            let link_text = format!(
+                "如果验证码没有正常显示，请打开链接查看: {}",
+                cs.captcha_url
+            );
+            f.render_widget(
+                Paragraph::new(link_text)
+                    .style(Style::default().fg(Color::Cyan))
+                    .wrap(Wrap { trim: true }),
+                chunks[2],
+            );
+        }
+    }
 
     let input_block = Block::default()
         .borders(Borders::ALL)
         .title(" 验证码 ")
-        .style(if cs.input_focused {
+        .style(if matches!(cs.focus, CaptchaFocus::Input) {
             Style::default().fg(Color::Cyan)
         } else {
             Style::default().fg(Color::DarkGray)
@@ -456,15 +509,29 @@ fn draw_captcha(f: &mut ratatui::Frame, area: ratatui::layout::Rect, cs: &Captch
         input_inner,
     );
 
-    f.render_widget(
-        Paragraph::new("  [ Enter 提交 ]  ")
-            .style(selected_style(Color::Green))
-            .alignment(Alignment::Center),
-        chunks[4],
-    );
+    if cs.error.is_empty() {
+        let submit_style = if matches!(cs.focus, CaptchaFocus::Submit) {
+            selected_style(Color::Green)
+        } else {
+            dim_style(Color::DarkGray)
+        };
+        f.render_widget(
+            Paragraph::new("  [ 提交 ]  ")
+                .style(submit_style)
+                .alignment(Alignment::Center),
+            chunks[4],
+        );
+    } else {
+        f.render_widget(
+            Paragraph::new(format!("  {}  ", cs.error))
+                .style(Style::default().fg(Color::Red))
+                .alignment(Alignment::Center),
+            chunks[4],
+        );
+    }
 
     f.render_widget(
-        Paragraph::new("↑↓ 选择分类  空格 勾选  Tab 切换到输入框  ESC 取消")
+        Paragraph::new("↑↓ 选择分类  空格 勾选  Tab 切换  R 刷新  ESC 取消")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
         chunks[5],

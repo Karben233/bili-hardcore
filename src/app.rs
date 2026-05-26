@@ -52,6 +52,13 @@ pub enum QuizPhase {
     Error(String),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CaptchaFocus {
+    Categories,
+    Input,
+    Submit,
+}
+
 #[derive(Debug, Clone)]
 pub struct CaptchaState {
     pub categories: Vec<CategoryItem>,
@@ -59,7 +66,8 @@ pub struct CaptchaState {
     pub captcha_url: String,
     pub captcha_token: String,
     pub input: String,
-    pub input_focused: bool,
+    pub focus: CaptchaFocus,
+    pub error: String,
 }
 
 #[derive(Debug, Clone)]
@@ -101,6 +109,7 @@ pub enum AppEvent {
         categories: Vec<CategoryItem>,
         url: String,
         token: String,
+        image_bytes: Option<Vec<u8>>,
     },
     LlmOk(String),
     LlmErr(String),
@@ -169,10 +178,14 @@ pub struct App {
     // QR polling state
     pub qr_auth_code: Option<String>,
     pub qr_poll_tick: u32,
+
+    // Captcha image rendering
+    pub captcha_picker: Option<ratatui_image::picker::Picker>,
+    pub captcha_image: Option<image::DynamicImage>,
 }
 
 impl App {
-    pub fn new(cli_config: Option<OpenAiConfig>) -> Self {
+    pub fn new(cli_config: Option<OpenAiConfig>, captcha_picker: Option<ratatui_image::picker::Picker>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let config = cli_config
@@ -235,6 +248,8 @@ impl App {
             bili,
             qr_auth_code: None,
             qr_poll_tick: 0,
+            captcha_picker,
+            captcha_image: None,
         }
     }
 
@@ -451,10 +466,21 @@ impl App {
             };
             match bili.captcha_get().await {
                 Ok(data) => {
+                    let url = data["url"].as_str().unwrap_or("").to_string();
+                    let token = data["token"].as_str().unwrap_or("").to_string();
+
+                    let image_bytes = match reqwest::get(&url).await {
+                        Ok(resp) if resp.status().is_success() => {
+                            resp.bytes().await.ok().map(|b| b.to_vec())
+                        }
+                        _ => None,
+                    };
+
                     let _ = tx.send(AppEvent::CaptchaData {
                         categories: cats,
-                        url: data["url"].as_str().unwrap_or("").to_string(),
-                        token: data["token"].as_str().unwrap_or("").to_string(),
+                        url,
+                        token,
+                        image_bytes,
                     });
                 }
                 Err(e) => {
@@ -656,14 +682,17 @@ impl App {
                 categories,
                 url,
                 token,
+                image_bytes,
             } => {
+                self.captcha_image = image_bytes.and_then(|b| image::load_from_memory(&b).ok());
                 self.phase = QuizPhase::Captcha(CaptchaState {
                     categories,
                     cat_focus: 0,
                     captcha_url: url,
                     captcha_token: token,
                     input: String::new(),
-                    input_focused: false,
+                    focus: CaptchaFocus::Categories,
+                    error: String::new(),
                 });
             }
             AppEvent::LlmOk(text) => match parse_answer(&text) {
