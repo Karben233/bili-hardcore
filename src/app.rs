@@ -528,14 +528,26 @@ impl App {
                 self.answers.iter().map(|a| &a.text).collect::<Vec<_>>()
             );
             tokio::spawn(async move {
-                match client.ask(&prompt).await {
-                    Ok(ans) => {
-                        let _ = tx.send(AppEvent::LlmOk(ans));
-                    }
-                    Err(e) => {
-                        let _ = tx.send(AppEvent::LlmErr(e.to_string()));
+                let max_retries = 3u32;
+                let mut last_err = String::new();
+                for attempt in 0..max_retries {
+                    match client.ask(&prompt).await {
+                        Ok(ans) => {
+                            let _ = tx.send(AppEvent::LlmOk(ans));
+                            return;
+                        }
+                        Err(e) => {
+                            last_err = e.to_string();
+                            tracing::warn!("LLM 请求失败 (第{}次): {}", attempt + 1, last_err);
+                            if attempt + 1 < max_retries {
+                                let delay =
+                                    std::time::Duration::from_millis(500 * 2u64.pow(attempt));
+                                tokio::time::sleep(delay).await;
+                            }
+                        }
                     }
                 }
+                let _ = tx.send(AppEvent::LlmErr(last_err));
             });
         }
     }
