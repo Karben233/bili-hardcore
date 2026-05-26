@@ -45,7 +45,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
-        Constraint::Length(1),
+        Constraint::Min(1),
         Constraint::Length(2),
         Constraint::Length(2),
         Constraint::Length(1),
@@ -134,6 +134,12 @@ fn draw_reset_confirm(
         widgets::Paragraph,
     };
 
+    let outer = Layout::vertical([
+        Constraint::Min(1),
+        Constraint::Length(1),
+    ])
+    .split(area);
+
     let chunks = Layout::vertical([
         Constraint::Percentage(30),
         Constraint::Length(2),
@@ -141,10 +147,9 @@ fn draw_reset_confirm(
         Constraint::Length(2),
         Constraint::Length(2),
         Constraint::Length(2),
-        Constraint::Length(1),
         Constraint::Percentage(30),
     ])
-    .split(area);
+    .split(outer[0]);
 
     f.render_widget(
         Paragraph::new("确认重置")
@@ -201,6 +206,6 @@ fn draw_reset_confirm(
         Paragraph::new("↑↓ 选择  Enter 确认  ESC 取消")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
-        chunks[6],
+        outer[1],
     );
 }
