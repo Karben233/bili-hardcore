@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
+- **Total Sessions**: 7
 - **Last Active**: 2026-05-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~207 | Active |
+| `journal-1.md` | ~240 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-05-26 | 清除 Python 遗留代码，项目完全迁移到 Rust | `108a9b4` | `refactor` |
 | 6 | 2026-05-26 | Config Buttons Vertical | `1040088` | `refactor` |
 | 5 | 2026-05-26 | Config Reset Button | `2bfaaac` | `refactor` |
 | 4 | 2026-05-26 | Captcha Sixel Image + Submit Button | `1232719` | `refactor` |
