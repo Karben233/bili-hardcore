@@ -106,3 +106,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Captcha Sixel Image + Submit Button
+
+**Date**: 2026-05-26
+**Task**: Captcha Sixel Image + Submit Button
+**Branch**: `refactor`
+
+### Summary
+
+验证码页面支持 Sixel/Kitty/iTerm2 图片渲染，三焦点导航（分类/输入框/提交按钮），R 键刷新，URL 降级显示
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1232719` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
