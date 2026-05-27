@@ -16,11 +16,11 @@ This is a ratatui + crossterm TUI app. Keyboard events flow through `input.rs` w
 
 **Options Considered**:
 1. Tab + arrows (dual system)
-2. Arrow keys only (↑↓←→)
+2. Arrow keys only (↑↓)
 
-**Decision**: Arrow keys only. Tab conflicted with terminal input behavior and caused confusion when text fields expected Tab characters. Vim keys (j/k/h/l) are supported as secondary bindings in menu contexts.
+**Decision**: ↑↓ only for navigation. Tab conflicted with terminal input behavior. ←→ is reserved for text cursor movement only.
 
-**How to apply**: When adding focus navigation to any screen, use `KeyCode::Up`/`KeyCode::Down` (and optionally `KeyCode::Char('j')`/`KeyCode::Char('k')`). Never bind Tab for navigation.
+**How to apply**: When adding focus navigation to any screen, use `KeyCode::Up`/`KeyCode::Down`. Never bind Tab, vim keys, or ←→ for navigation. ←→ is only for text input cursor movement.
 
 ---
 
@@ -37,15 +37,15 @@ This is a ratatui + crossterm TUI app. Keyboard events flow through `input.rs` w
 
 | Key | Action |
 |-----|--------|
-| `↑` / `k` | Previous menu item |
-| `↓` / `j` | Next menu item |
+| `↑` | Previous menu item |
+| `↓` | Next menu item |
 
 ### Config Page
 
 | Key | Action |
 |-----|--------|
 | `↑` / `↓` | Cycle through fields (BaseUrl → Model → ApiKey → SaveBtn → ResetBtn → wraps) |
-| `←` / `→` | Move cursor within text field / select dialog option |
+| `←` / `→` | Move cursor within text field |
 | `Backspace` | Delete character before cursor |
 | `Char(c)` | Insert character at cursor position |
 
@@ -62,14 +62,9 @@ This is a ratatui + crossterm TUI app. Keyboard events flow through `input.rs` w
 ### Captcha Sub-page Focus Cycle
 
 ```
-Categories (↑↓ to move, Space to toggle)
-    ↓
-OpenBrowser (Enter to open)
-    ↓
-Input (type captcha text)
-    ↓
-Submit (Enter to submit)
-    ↓ wraps to Categories
+Submit ←→ Input ←→ OpenBrowser ←→ Categories
+    ↑ wraps to                        ↑ wraps to
+    └─────────────────────────────────┘
 ```
 
 ---

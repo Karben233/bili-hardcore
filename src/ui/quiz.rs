@@ -29,10 +29,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     match &app.phase {
         QuizPhase::NotConfigured => {
             let chunks = Layout::vertical([
-                Constraint::Percentage(40),
+                Constraint::Percentage(35),
                 Constraint::Length(2),
                 Constraint::Length(2),
-                Constraint::Percentage(40),
+                Constraint::Length(1),
+                Constraint::Percentage(35),
             ])
             .split(inner);
             f.render_widget(
@@ -50,6 +51,12 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                     .style(selected_style(Color::Cyan))
                     .alignment(Alignment::Center),
                 chunks[2],
+            );
+            f.render_widget(
+                Paragraph::new("Enter 前往配置  ESC 返回")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .alignment(Alignment::Center),
+                chunks[3],
             );
         }
 
@@ -372,7 +379,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 chunks[1],
             );
             f.render_widget(
-                Paragraph::new("  [ Enter 返回首页 ]  ")
+                Paragraph::new("  [ Enter/ESC 返回首页 ]  ")
                     .style(selected_style(Color::Cyan))
                     .alignment(Alignment::Center),
                 chunks[2],
@@ -395,7 +402,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 chunks[1],
             );
             f.render_widget(
-                Paragraph::new("  [ Enter 返回首页 ]  ")
+                Paragraph::new("  [ Enter/ESC 返回首页 ]  ")
                     .style(selected_style(Color::Cyan))
                     .alignment(Alignment::Center),
                 chunks[2],

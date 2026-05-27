@@ -15,14 +15,14 @@ impl App {
 
     fn key_home(&mut self, code: KeyCode) {
         match code {
-            KeyCode::Up | KeyCode::Char('k') => {
+            KeyCode::Up => {
                 self.home_sel = match self.home_sel {
                     HomeSelection::StartQuiz => HomeSelection::Quit,
                     HomeSelection::Config => HomeSelection::StartQuiz,
                     HomeSelection::Quit => HomeSelection::Config,
                 };
             }
-            KeyCode::Down | KeyCode::Char('j') => {
+            KeyCode::Down => {
                 self.home_sel = match self.home_sel {
                     HomeSelection::StartQuiz => HomeSelection::Config,
                     HomeSelection::Config => HomeSelection::Quit,
@@ -42,10 +42,10 @@ impl App {
         // Handle confirmation dialog when active
         if self.config_confirm_reset {
             match code {
-                KeyCode::Left | KeyCode::Up => {
+                KeyCode::Up => {
                     self.config_reset_choice = self.config_reset_choice.saturating_sub(1);
                 }
-                KeyCode::Right | KeyCode::Down => {
+                KeyCode::Down => {
                     self.config_reset_choice = (self.config_reset_choice + 1).min(2);
                 }
                 KeyCode::Enter => {
@@ -141,10 +141,10 @@ impl App {
                 _ => {}
             },
             QuizPhase::LoginTimeout { retry } => match code {
-                KeyCode::Left | KeyCode::Up | KeyCode::Char('h') | KeyCode::Char('k') => {
+                KeyCode::Up => {
                     self.phase = QuizPhase::LoginTimeout { retry: true };
                 }
-                KeyCode::Right | KeyCode::Down | KeyCode::Char('l') | KeyCode::Char('j') => {
+                KeyCode::Down => {
                     self.phase = QuizPhase::LoginTimeout { retry: false };
                 }
                 KeyCode::Enter => {
@@ -214,6 +214,11 @@ impl App {
                     ..cs
                 }
             }
+            KeyCode::Up if matches!(cs.focus, CaptchaFocus::Categories) => CaptchaState {
+                focus: CaptchaFocus::Submit,
+                error: String::new(),
+                ..cs
+            },
             KeyCode::Up if matches!(cs.focus, CaptchaFocus::OpenBrowser) => CaptchaState {
                 focus: CaptchaFocus::Categories,
                 error: String::new(),
@@ -256,12 +261,11 @@ impl App {
                 ..cs
             },
             KeyCode::Down if matches!(cs.focus, CaptchaFocus::Submit) => CaptchaState {
-                focus: CaptchaFocus::OpenBrowser,
+                focus: CaptchaFocus::Categories,
+                cat_focus: 0,
                 error: String::new(),
                 ..cs
             },
-            // Down on OpenBrowser: stay
-            KeyCode::Down if matches!(cs.focus, CaptchaFocus::OpenBrowser) => cs,
             // Space toggles category selection (only in Categories focus)
             KeyCode::Char(' ') if matches!(cs.focus, CaptchaFocus::Categories) => {
                 let count = cs.categories.iter().filter(|c| c.selected).count();
