@@ -47,21 +47,61 @@ if code != 0 {
 }
 ```
 
-### Pattern 2: Exponential backoff retry (LLM client)
+### Pattern 2: Exponential backoff retry (spawned tasks)
+
+LLM requests and other flaky operations retry with exponential backoff inside a `tokio::spawn` block. The retry logic lives in the spawned task, not the `ask()` method itself.
+
+**Retry parameters**: max 3 attempts, base delay 500ms, doubles each attempt (500ms → 1s → 2s).
 
 ```rust
-for attempt in 0..3 {
-    match self.ask_inner(question).await {
-        Ok(result) => return Ok(result),
-        Err(e) if attempt < 2 => {
-            tokio::time::sleep(Duration::from_millis(500 * 2u64.pow(attempt as u32))).await;
+// src/app.rs — spawn_llm()
+tokio::spawn(async move {
+    let max_retries = 3u32;
+    let mut last_err = String::new();
+    for attempt in 0..max_retries {
+        match client.ask(&prompt).await {
+            Ok(ans) => {
+                let _ = tx.send(AppEvent::LlmOk(ans));
+                return;
+            }
+            Err(e) => {
+                last_err = e.to_string();
+                tracing::warn!("LLM 请求失败 (第{}次): {}", attempt + 1, last_err);
+                if attempt + 1 < max_retries {
+                    let delay = std::time::Duration::from_millis(500 * 2u64.pow(attempt));
+                    tokio::time::sleep(delay).await;
+                }
+            }
         }
-        Err(e) => return Err(e),
     }
+    let _ = tx.send(AppEvent::LlmErr(last_err));
+});
+```
+
+**Why retry in spawn, not in `ask()`**: The spawned task owns the `tx` channel sender and can report errors. Retrying inside `ask()` would require the caller to re-invoke, complicating the event loop.
+
+### Pattern 3: Background task lifecycle (fire-and-forget via channel)
+
+All background work uses `tokio::spawn` + `mpsc::UnboundedSender<AppEvent>` to communicate results back to the TUI loop. Tasks are **not** tracked with `JoinHandle` — they run until completion and send a single result event.
+
+**Critical: ESC cleanup**. When the user presses ESC to exit a screen, the app calls `self.back()` which changes `self.page`. Spawned tasks continue running but their events are handled by the new page's event handler, which typically ignores irrelevant events or treats them as a no-op.
+
+```rust
+// src/app.rs — spawn pattern
+pub fn spawn_fetch_question(&self) {
+    let tx = self.tx.clone();
+    tokio::spawn(async move {
+        // ... async work ...
+        let _ = tx.send(AppEvent::QuestionReady { ... });
+    });
 }
 ```
 
-### Pattern 3: TUI error display
+**Key invariant**: `self.tx` is always available because it's created once at app startup. The `let _ = tx.send(...)` pattern silently drops send errors if the receiver is gone (app shutting down).
+
+**Gotcha**: There is no task cancellation on ESC. If a long-running task (e.g., LLM request) completes after the user navigated away, the event arrives at the main loop but may be ignored based on current page/phase state. Future improvement: use `tokio::select!` with a cancellation token.
+
+### Pattern 4: TUI error display
 
 Errors from background tasks are sent via `mpsc` channel as `AppEvent` variants and displayed in the UI. The app never crashes — errors are shown as messages.
 

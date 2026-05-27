@@ -58,6 +58,38 @@ pub enum AppEvent {
 - **Don't block the TUI event loop** — use `tokio::spawn` for async work
 - **Don't store secrets in the repository** — user credentials go to `~/.bili-hardcore/`
 - **Don't use `println!`** — it corrupts the TUI display; use `tracing` macros
+- **Don't use Tab for focus navigation** — use ↑↓ arrows only (see [Keyboard Handling](./keyboard-handling.md))
+
+---
+
+## UI Help Bar Pattern
+
+Every screen displays a context-sensitive help bar at the bottom showing available keyboard shortcuts.
+
+### Convention
+
+```rust
+// At the bottom of each screen's render function:
+Paragraph::new("↑↓ 选择分类  空格 勾选  Ctrl+R 刷新  ESC 取消")
+    .style(Style::default().fg(Color::DarkGray))
+```
+
+### Rules
+
+1. **Always show available actions** — never leave the user guessing
+2. **Use Chinese text** for key descriptions (matches the app's user-facing language)
+3. **Style with `Color::DarkGray`** — visible but not distracting
+4. **Show keys in consistent order**: navigation → action → escape
+5. **Update when phase changes** — the help text reflects the current sub-phase
+
+### Examples by Screen
+
+| Screen | Help Bar Text |
+|--------|--------------|
+| WaitingScan | `B 浏览器打开二维码  Ctrl+R 刷新  ESC 返回` |
+| Captcha (categories) | `↑↓ 选择分类  空格 勾选  Ctrl+R 刷新  ESC 取消` |
+| Captcha (submit) | `↑↓ 切换  Enter 确认` |
+| Answer display | `↑↓ 滚动历史  ESC 退出答题` |
 
 ---
 

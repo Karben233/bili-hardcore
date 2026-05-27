@@ -19,6 +19,7 @@ This directory contains guidelines for the Rust backend. The project is a TUI ap
 | [Error Handling](./error-handling.md) | AppError enum, handling strategies, API codes | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns, tech debt | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | tracing setup, log levels, format | Filled |
+| [Keyboard Handling](./keyboard-handling.md) | Key bindings, navigation conventions, event dispatch | Filled |
 
 ---
 
