@@ -80,15 +80,6 @@ impl App {
                 }
                 _ => {}
             },
-            KeyCode::Tab => {
-                self.cfg_focus = match self.cfg_focus {
-                    ConfigFocus::BaseUrl => ConfigFocus::Model,
-                    ConfigFocus::Model => ConfigFocus::ApiKey,
-                    ConfigFocus::ApiKey => ConfigFocus::SaveBtn,
-                    ConfigFocus::SaveBtn => ConfigFocus::ResetBtn,
-                    ConfigFocus::ResetBtn => ConfigFocus::BaseUrl,
-                };
-            }
             KeyCode::Backspace => {
                 if let Some(idx) = field_idx {
                     let pos = self.cfg_cursors[idx];
@@ -215,16 +206,6 @@ impl App {
                 self.phase = QuizPhase::NotConfigured;
                 return;
             }
-            KeyCode::Tab => CaptchaState {
-                focus: match cs.focus {
-                    CaptchaFocus::Categories => CaptchaFocus::OpenBrowser,
-                    CaptchaFocus::OpenBrowser => CaptchaFocus::Input,
-                    CaptchaFocus::Input => CaptchaFocus::Submit,
-                    CaptchaFocus::Submit => CaptchaFocus::Categories,
-                },
-                error: String::new(),
-                ..cs
-            },
             // Up arrow navigation
             KeyCode::Up if matches!(cs.focus, CaptchaFocus::Categories) && cs.cat_focus > 0 => {
                 CaptchaState {

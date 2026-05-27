@@ -535,7 +535,7 @@ fn draw_captcha(
     }
 
     f.render_widget(
-        Paragraph::new("↑↓ 选择分类  空格 勾选  Tab 切换  Ctrl+R 刷新  ESC 取消")
+        Paragraph::new("↑↓ 选择分类  空格 勾选  Ctrl+R 刷新  ESC 取消")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
         chunks[5],

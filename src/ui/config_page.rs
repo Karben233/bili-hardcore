@@ -116,7 +116,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     );
 
     f.render_widget(
-        Paragraph::new("Tab/↑↓ 切换  Enter 确认  ESC 返回")
+        Paragraph::new("↑↓ 切换  Enter 确认  ESC 返回")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
         chunks[7],
