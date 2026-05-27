@@ -83,12 +83,12 @@ impl BiliClient {
             .send()
             .await?;
         let text = resp.text().await?;
-        tracing::info!("GenWebTicket => {}", truncate_str(&text, 500));
+        tracing::info!("GenWebTicket => {}", &text);
         let json: Value = serde_json::from_str(&text).map_err(|e| {
             AppError::other(format!(
                 "JSON解析失败: {} | body: {}",
                 e,
-                truncate_str(&text, 200)
+                &text[..text.floor_char_boundary(200)]
             ))
         })?;
         json["data"]["ticket"]
@@ -97,7 +97,7 @@ impl BiliClient {
             .ok_or_else(|| {
                 AppError::other(format!(
                     "获取 ticket 失败: {}",
-                    &text[..text.len().min(200)]
+                    &text[..text.floor_char_boundary(200)]
                 ))
             })
     }
@@ -136,12 +136,12 @@ impl BiliClient {
         }
         let resp = req.send().await?;
         let text = resp.text().await?;
-        tracing::info!("GET {} => {}", url, truncate_str(&text, 500));
+        tracing::info!("GET {} => {}", url, &text);
         serde_json::from_str(&text).map_err(|e| {
             AppError::other(format!(
                 "JSON解析失败: {} | body: {}",
                 e,
-                truncate_str(&text, 200)
+                &text[..text.floor_char_boundary(200)]
             ))
         })
     }
@@ -160,12 +160,12 @@ impl BiliClient {
         }
         let resp = req.form(&params).send().await?;
         let text = resp.text().await?;
-        tracing::info!("POST {} => {}", url, truncate_str(&text, 500));
+        tracing::info!("POST {} => {}", url, &text);
         serde_json::from_str(&text).map_err(|e| {
             AppError::other(format!(
                 "JSON解析失败: {} | body: {}",
                 e,
-                truncate_str(&text, 200)
+                &text[..text.floor_char_boundary(200)]
             ))
         })
     }
@@ -324,17 +324,5 @@ impl BiliClient {
                 message: format!("获取答题结果失败: {}", resp),
             })
         }
-    }
-}
-
-fn truncate_str(s: &str, max: usize) -> &str {
-    if s.len() <= max {
-        s
-    } else {
-        let mut end = max;
-        while end > 0 && !s.is_char_boundary(end) {
-            end -= 1;
-        }
-        &s[..end]
     }
 }
