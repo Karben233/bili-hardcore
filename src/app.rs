@@ -186,6 +186,9 @@ pub struct App {
     // Captcha image rendering
     pub captcha_picker: Option<ratatui_image::picker::Picker>,
     pub captcha_image: Option<image::DynamicImage>,
+
+    // Captcha refresh: preserve selections and focus
+    pub captcha_preserve: Option<(Vec<bool>, usize, CaptchaFocus, String)>,
 }
 
 impl App {
@@ -256,6 +259,7 @@ impl App {
             qr_poll_tick: 0,
             captcha_picker,
             captcha_image: None,
+            captcha_preserve: None,
         }
     }
 
@@ -725,13 +729,25 @@ impl App {
                 image_bytes,
             } => {
                 self.captcha_image = image_bytes.and_then(|b| image::load_from_memory(&b).ok());
+                let (selected, cat_focus, focus, input) = self
+                    .captcha_preserve
+                    .take()
+                    .unwrap_or((vec![], 0, CaptchaFocus::Categories, String::new()));
+                let categories = categories
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, mut c)| {
+                        c.selected = selected.get(i).copied().unwrap_or(false);
+                        c
+                    })
+                    .collect();
                 self.phase = QuizPhase::Captcha(CaptchaState {
                     categories,
-                    cat_focus: 0,
+                    cat_focus,
                     captcha_url: url,
                     captcha_token: token,
-                    input: String::new(),
-                    focus: CaptchaFocus::Categories,
+                    input,
+                    focus,
                     error: String::new(),
                 });
             }

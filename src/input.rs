@@ -1,6 +1,6 @@
 use crate::app::*;
 use crate::config::OpenAiConfig;
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::app::CaptchaFocus;
 
@@ -9,7 +9,7 @@ impl App {
         match self.page {
             Page::Home => self.key_home(key.code),
             Page::Config => self.key_config(key.code),
-            Page::Quiz => self.key_quiz(key.code),
+            Page::Quiz => self.key_quiz(key),
         }
     }
 
@@ -141,7 +141,8 @@ impl App {
         }
     }
 
-    fn key_quiz(&mut self, code: KeyCode) {
+    fn key_quiz(&mut self, key: crossterm::event::KeyEvent) {
+        let code = key.code;
         match &self.phase {
             QuizPhase::NotConfigured => match code {
                 KeyCode::Enter => self.enter_config(),
@@ -175,7 +176,7 @@ impl App {
                 KeyCode::Esc => self.back(),
                 _ => {}
             },
-            QuizPhase::Captcha(_) => self.key_captcha(code),
+            QuizPhase::Captcha(_) => self.key_captcha(key),
             QuizPhase::Finished { .. } | QuizPhase::Error(_) => {
                 if matches!(code, KeyCode::Enter | KeyCode::Esc) {
                     self.back();
@@ -189,7 +190,8 @@ impl App {
         }
     }
 
-    fn key_captcha(&mut self, code: KeyCode) {
+    fn key_captcha(&mut self, key: crossterm::event::KeyEvent) {
+        let code = key.code;
         let cs = match std::mem::replace(&mut self.phase, QuizPhase::NotConfigured) {
             QuizPhase::Captcha(cs) => cs,
             other => {
@@ -287,8 +289,10 @@ impl App {
                     ..cs
                 }
             }
-            // Refresh captcha (only when NOT in Input focus)
-            KeyCode::Char('r') if !matches!(cs.focus, CaptchaFocus::Input) => {
+            // Refresh captcha (Ctrl+R works everywhere, preserves selections)
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let selected: Vec<bool> = cs.categories.iter().map(|c| c.selected).collect();
+                self.captcha_preserve = Some((selected, cs.cat_focus, cs.focus, String::new()));
                 self.captcha_image = None;
                 self.spawn_fetch_captcha();
                 self.phase = QuizPhase::FetchingQuestion;
