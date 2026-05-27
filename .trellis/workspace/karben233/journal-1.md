@@ -338,3 +338,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 11: 修复高/中优先级代码问题
+
+**Date**: 2026-05-27
+**Task**: 修复高/中优先级代码问题
+**Branch**: `refactor`
+
+### Summary
+
+修复4个代码问题：日志WorkerGuard提前释放、config_page UTF-8光标偏移panic、BiliClient连接池丢失、ShowingQuestion死代码；额外清理clippy needless_return警告。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14aac1e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
