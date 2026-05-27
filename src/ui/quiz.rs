@@ -97,7 +97,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 chunks[2],
             );
             f.render_widget(
-                Paragraph::new("B 浏览器打开二维码  ESC 返回")
+                Paragraph::new("B 浏览器打开二维码  Ctrl+R 刷新  ESC 返回")
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center),
                 chunks[3],
@@ -184,9 +184,16 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 Layout::horizontal([Constraint::Percentage(40), Constraint::Percentage(60)])
                     .split(outer[1]);
 
-            // Left column: question + options/status
+            // Left column: bordered block with title
+            let left_block = Block::default()
+                .borders(Borders::ALL)
+                .title(" 正在答题 ")
+                .style(Style::default().fg(Color::Cyan));
+            let left_inner = left_block.inner(columns[0]);
+            f.render_widget(left_block, columns[0]);
+
             let left =
-                Layout::vertical([Constraint::Length(3), Constraint::Min(3)]).split(columns[0]);
+                Layout::vertical([Constraint::Length(3), Constraint::Min(3)]).split(left_inner);
 
             f.render_widget(
                 Paragraph::new(format!("题目: {}", app.question_text))
@@ -199,39 +206,41 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 left[0],
             );
 
+            use ratatui::text::{Line, Span};
+
+            let mut lines: Vec<Line> = vec![];
             match &app.phase {
                 QuizPhase::WaitingLlm => {
-                    f.render_widget(
-                        Paragraph::new(format!("{} AI 思考中...", app.spin_char()))
-                            .style(Style::default().fg(Color::Cyan)),
-                        left[1],
-                    );
+                    lines.push(Line::from(Span::styled(
+                        format!("{} AI 思考中...", app.spin_char()),
+                        Style::default().fg(Color::Cyan),
+                    )));
+                    lines.push(Line::from(""));
                 }
                 QuizPhase::Submitting => {
-                    f.render_widget(
-                        Paragraph::new(format!("正在提交第 {} 题答案...", num))
-                            .style(Style::default().fg(Color::Cyan)),
-                        left[1],
-                    );
+                    lines.push(Line::from(Span::styled(
+                        format!("正在提交第 {} 题答案...", num),
+                        Style::default().fg(Color::Cyan),
+                    )));
+                    lines.push(Line::from(""));
                 }
-                _ => {
-                    let mut opts = String::new();
-                    for (i, a) in app.answers.iter().enumerate() {
-                        let label = (b'A' + i as u8) as char;
-                        opts.push_str(&format!("{}. {}\n", label, a.text));
-                    }
-                    f.render_widget(
-                        Paragraph::new(opts)
-                            .style(Style::default().fg(Color::White))
-                            .wrap(Wrap { trim: true }),
-                        left[1],
-                    );
-                }
+                _ => {}
             }
+            for (i, a) in app.answers.iter().enumerate() {
+                let label = (b'A' + i as u8) as char;
+                lines.push(Line::from(Span::styled(
+                    format!("{}. {}", label, a.text),
+                    Style::default().fg(Color::White),
+                )));
+            }
+            f.render_widget(
+                Paragraph::new(lines).wrap(Wrap { trim: true }),
+                left[1],
+            );
 
             // Right column: history
             let history_block = Block::default()
-                .borders(Borders::LEFT)
+                .borders(Borders::ALL)
                 .title(" 已答题目 ")
                 .style(Style::default().fg(Color::DarkGray));
             let history_inner = history_block.inner(columns[1]);

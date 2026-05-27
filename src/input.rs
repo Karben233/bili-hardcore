@@ -166,6 +166,10 @@ impl App {
                 _ => {}
             },
             QuizPhase::WaitingScan { url, .. } => match code {
+                KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.spawn_login();
+                    return;
+                }
                 KeyCode::Char('b') | KeyCode::Char('B') => {
                     let qr_url = format!(
                         "https://api.cl2wm.cn/api/qrcode/code?text={}",
@@ -182,11 +186,16 @@ impl App {
                     self.back();
                 }
             }
-            _ => {
-                if matches!(code, KeyCode::Esc) {
-                    self.back();
+            _ => match code {
+                KeyCode::Esc => self.back(),
+                KeyCode::Down => {
+                    self.history_scroll = self.history_scroll.saturating_add(1);
                 }
-            }
+                KeyCode::Up => {
+                    self.history_scroll = self.history_scroll.saturating_sub(1);
+                }
+                _ => {}
+            },
         }
     }
 
