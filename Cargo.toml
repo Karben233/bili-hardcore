@@ -26,11 +26,12 @@ time = { version = "0.3", features = ["local-offset", "macros"] }
 dirs = "6"
 urlencoding = "2"
 unicode-width = "0.2"
-ratatui-image = { version = "9", default-features = false, features = ["image-defaults", "crossterm"] }
-image = "0.25"
+ratatui-image = { version = "9", default-features = false, features = ["crossterm"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 webbrowser = "1"
 
 [profile.release]
-opt-level = "s"
+opt-level = "z"
 lto = true
+panic = "abort"
 strip = true
