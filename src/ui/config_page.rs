@@ -82,8 +82,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
         let mut text = display;
         if is_focused {
-            let pos = app.cfg_cursors[i].min(text.len());
-            text.insert(pos, '|');
+            let char_count = text.chars().count();
+            let pos = app.cfg_cursors[i].min(char_count);
+            let byte_pos = text.char_indices().nth(pos).map_or(text.len(), |(i, _)| i);
+            text.insert(byte_pos, '|');
         }
         f.render_widget(
             Paragraph::new(text).style(Style::default().fg(Color::White)),

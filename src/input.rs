@@ -159,7 +159,6 @@ impl App {
             QuizPhase::WaitingScan { url, .. } => match code {
                 KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.spawn_login();
-                    return;
                 }
                 KeyCode::Char('b') | KeyCode::Char('B') => {
                     let qr_url = format!(

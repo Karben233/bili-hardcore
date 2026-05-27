@@ -64,6 +64,15 @@ impl BiliClient {
             .insert("x-bili-ticket".into(), ticket.into());
     }
 
+    pub fn clone_for_async(&self) -> Self {
+        Self {
+            http: self.http.clone(),
+            access_token: self.access_token.clone(),
+            csrf: self.csrf.clone(),
+            extra_headers: self.extra_headers.clone(),
+        }
+    }
+
     pub async fn fetch_ticket(&self) -> Result<String, AppError> {
         let params = gen_ticket_params();
         let resp = self

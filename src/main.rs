@@ -30,16 +30,16 @@ struct Cli {
     api_key: Option<String>,
 }
 
-fn setup_logging() -> Result<(), Box<dyn std::error::Error>> {
+fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dyn std::error::Error>> {
     let log_dir = std::path::Path::new("./logs");
     let _ = std::fs::create_dir_all(log_dir);
     let file_appender = tracing_appender::rolling::never(log_dir, "bili-hardcore.log");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
         .with_writer(non_blocking)
         .with_target(false)
         .init();
-    Ok(())
+    Ok(guard)
 }
 
 #[tokio::main]
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => None,
     };
 
-    setup_logging()?;
+    let _log_guard = setup_logging()?;
 
     // TUI setup
     terminal::enable_raw_mode()?;

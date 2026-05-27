@@ -43,7 +43,6 @@ pub enum QuizPhase {
     },
     CheckingLevel,
     FetchingQuestion,
-    ShowingQuestion,
     WaitingLlm,
     Submitting,
     Captcha(CaptchaState),
@@ -734,7 +733,6 @@ impl App {
                 self.question_text = question;
                 self.answers = answers;
                 self.question_id = id;
-                self.phase = QuizPhase::ShowingQuestion;
                 self.spawn_llm();
                 self.phase = QuizPhase::WaitingLlm;
             }
@@ -864,10 +862,6 @@ fn make_qr(url: &str) -> String {
 
 impl BiliClient {
     pub fn async_clone(&self) -> Self {
-        let mut new = BiliClient::new();
-        new.access_token = self.access_token.clone();
-        new.csrf = self.csrf.clone();
-        new.extra_headers = self.extra_headers.clone();
-        new
+        self.clone_for_async()
     }
 }

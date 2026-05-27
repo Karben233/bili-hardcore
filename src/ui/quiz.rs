@@ -155,7 +155,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
         }
 
-        QuizPhase::ShowingQuestion | QuizPhase::WaitingLlm | QuizPhase::Submitting => {
+        QuizPhase::WaitingLlm | QuizPhase::Submitting => {
             let num = app.question_num;
             let accuracy = if num > 0 {
                 (app.score as f64 / num as f64 * 100.0) as u32
