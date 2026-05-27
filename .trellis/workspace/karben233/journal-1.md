@@ -271,3 +271,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: 移除 Tab 键切换操作
+
+**Date**: 2026-05-27
+**Task**: 移除 Tab 键切换操作
+**Branch**: `refactor`
+
+### Summary
+
+移除配置页和验证码页的 Tab 键焦点切换逻辑，统一使用 ↑↓ 箭头导航，同步更新帮助文字
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `72f6360` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
