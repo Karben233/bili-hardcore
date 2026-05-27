@@ -30,6 +30,7 @@ struct Cli {
     api_key: Option<String>,
 }
 
+#[cfg(debug_assertions)]
 fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dyn std::error::Error>> {
     let log_dir = std::path::Path::new("./logs");
     let _ = std::fs::create_dir_all(log_dir);
@@ -39,8 +40,14 @@ fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dy
         .with_writer(non_blocking)
         .with_ansi(false)
         .with_target(false)
+        .with_timer(tracing_subscriber::fmt::time::LocalTime::new(time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]")))
         .init();
     Ok(guard)
+}
+
+#[cfg(not(debug_assertions))]
+fn setup_logging() -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
 }
 
 #[tokio::main]
