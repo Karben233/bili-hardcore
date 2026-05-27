@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
-- **Last Active**: 2026-05-26
+- **Total Sessions**: 8
+- **Last Active**: 2026-05-27
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~240 | Active |
+| `journal-1.md` | ~273 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-05-27 | fix: ESC 退出答题后后台任务不再继续运行 | `95beda3` | `refactor` |
 | 7 | 2026-05-26 | 清除 Python 遗留代码，项目完全迁移到 Rust | `108a9b4` | `refactor` |
 | 6 | 2026-05-26 | Config Buttons Vertical | `1040088` | `refactor` |
 | 5 | 2026-05-26 | Config Reset Button | `2bfaaac` | `refactor` |

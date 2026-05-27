@@ -238,3 +238,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: fix: ESC 退出答题后后台任务不再继续运行
+
+**Date**: 2026-05-27
+**Task**: fix: ESC 退出答题后后台任务不再继续运行
+**Branch**: `refactor`
+
+### Summary
+
+在 App::process() 添加页面守卫，self.page != Page::Quiz 时丢弃所有答题事件，防止 ESC 退出后 tokio 后台任务继续驱动答题循环。同时增加答题历史持久化功能。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `95beda3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
