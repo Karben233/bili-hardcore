@@ -371,3 +371,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 修复日志ANSI转义码与截断
+
+**Date**: 2026-05-27
+**Task**: 修复日志ANSI转义码与截断
+**Branch**: `refactor`
+
+### Summary
+
+日志写文件禁用ANSI颜色，移除API响应截断，删除truncate_str函数
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `87dbc13` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
