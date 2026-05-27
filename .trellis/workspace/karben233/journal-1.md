@@ -437,3 +437,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: 压缩release包体积
+
+**Date**: 2026-05-27
+**Task**: 压缩release包体积
+**Branch**: `refactor`
+
+### Summary
+
+精简image依赖只保留png+jpeg，release profile加panic=abort和opt-level=z，体积从4.9MB降到3.6MB
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c37f50c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
