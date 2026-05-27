@@ -217,7 +217,8 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 _ => {
                     let mut opts = String::new();
                     for (i, a) in app.answers.iter().enumerate() {
-                        opts.push_str(&format!("{}. {}\n", i + 1, a.text));
+                        let label = (b'A' + i as u8) as char;
+                        opts.push_str(&format!("{}. {}\n", label, a.text));
                     }
                     f.render_widget(
                         Paragraph::new(opts)
@@ -270,17 +271,18 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                     ]));
                     // Options with highlight on chosen one
                     for (i, opt) in item.options.iter().enumerate() {
+                        let label = (b'A' + i as u8) as char;
                         if i + 1 == item.chosen_idx {
                             lines.push(Line::from(vec![
                                 Span::styled(
-                                    format!("  > {}. ", i + 1),
+                                    format!("  > {}. ", label),
                                     Style::default().fg(mark_color).add_modifier(Modifier::BOLD),
                                 ),
                                 Span::styled(opt.clone(), Style::default().fg(mark_color)),
                             ]));
                         } else {
                             lines.push(Line::from(Span::styled(
-                                format!("    {}. {}", i + 1, opt),
+                                format!("    {}. {}", label, opt),
                                 Style::default().fg(Color::DarkGray),
                             )));
                         }
