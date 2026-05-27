@@ -308,7 +308,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             }
 
             f.render_widget(
-                Paragraph::new("ESC 退出答题")
+                Paragraph::new("↑↓ 滚动历史  ESC 退出答题")
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center),
                 outer[2],
