@@ -1,5 +1,6 @@
 use crate::api::BiliClient;
 use crate::config::{self, AuthData, OpenAiConfig};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 // --- Pages ---
@@ -133,7 +134,7 @@ pub struct AnswerItem {
     pub hash: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryItem {
     pub num: u32,
     pub question: String,
@@ -247,7 +248,7 @@ impl App {
             answers: vec![],
             question_text: String::new(),
             spinner: 0,
-            history: vec![],
+            history: config::load_history(),
             history_scroll: 0,
             chosen_answer_idx: 0,
             config,
@@ -673,6 +674,26 @@ impl App {
     // --- Event processing ---
 
     pub fn process(&mut self, ev: AppEvent) {
+        // 答题相关事件：不在答题页面时丢弃，防止 ESC 退出后后台继续答题
+        if self.page != Page::Quiz {
+            match ev {
+                AppEvent::TicketReady(_)
+                | AppEvent::QrReady { .. }
+                | AppEvent::LoginOk(_)
+                | AppEvent::LoginPending
+                | AppEvent::LevelOk
+                | AppEvent::LevelFail(_)
+                | AppEvent::QuestionReady { .. }
+                | AppEvent::NeedCaptcha
+                | AppEvent::CaptchaData { .. }
+                | AppEvent::LlmOk(_)
+                | AppEvent::LlmErr(_)
+                | AppEvent::SubmitOk { .. }
+                | AppEvent::SubmitFail(_)
+                | AppEvent::QuizDone { .. }
+                | AppEvent::Fail(_) => return,
+            }
+        }
         match ev {
             AppEvent::TicketReady(ticket) => {
                 self.bili.set_ticket(&ticket);
@@ -697,7 +718,6 @@ impl App {
             AppEvent::LoginPending => {}
             AppEvent::LevelOk => {
                 self.score = 0;
-                self.history.clear();
                 self.phase = QuizPhase::FetchingQuestion;
                 self.spawn_fetch_question();
             }
@@ -719,6 +739,10 @@ impl App {
                 self.phase = QuizPhase::WaitingLlm;
             }
             AppEvent::NeedCaptcha => {
+                if !self.history.is_empty() {
+                    self.history.clear();
+                    let _ = config::save_history(&self.history);
+                }
                 self.phase = QuizPhase::FetchingQuestion;
                 self.spawn_fetch_captcha();
             }
@@ -776,6 +800,7 @@ impl App {
                     chosen_idx: self.chosen_answer_idx,
                     correct,
                 });
+                let _ = config::save_history(&self.history);
                 self.score = score;
                 if num < 100 {
                     self.phase = QuizPhase::FetchingQuestion;

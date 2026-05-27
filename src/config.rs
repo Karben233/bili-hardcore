@@ -106,6 +106,34 @@ pub fn delete_auth() -> Result<()> {
     Ok(())
 }
 
+// --- Quiz History ---
+
+use crate::app::HistoryItem;
+
+pub fn history_path() -> PathBuf {
+    config_dir().join("history.json")
+}
+
+pub fn load_history() -> Vec<HistoryItem> {
+    let path = history_path();
+    if !path.exists() {
+        return vec![];
+    }
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+pub fn save_history(history: &[HistoryItem]) -> Result<()> {
+    ensure_config_dir()?;
+    let path = history_path();
+    let content = serde_json::to_string_pretty(history).context("序列化答题记录失败")?;
+    fs::write(&path, content).context("写入答题记录失败")?;
+    Ok(())
+}
+
 /// LLM prompt 模板
 pub const QUIZ_PROMPT_TEMPLATE: &str = "\
 当前时间：{}
