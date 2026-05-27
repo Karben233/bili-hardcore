@@ -304,3 +304,37 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Spec 更新 + 键盘操作一致性修复
+
+**Date**: 2026-05-27
+**Task**: Spec 更新 + 键盘操作一致性修复
+**Branch**: `refactor`
+
+### Summary
+
+更新 4 个 code-spec（键盘处理、后台任务、UI 帮助栏、LLM 重试），移除 vim 键和左右箭头导航，修复 Captcha 焦点循环，补充 UI 提示文字
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `607d709` | (see git log) |
+| `85ee723` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
