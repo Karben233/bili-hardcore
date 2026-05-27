@@ -404,3 +404,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: 日志时区与release禁用
+
+**Date**: 2026-05-27
+**Task**: 日志时区与release禁用
+**Branch**: `refactor`
+
+### Summary
+
+日志使用本地时区(LocalTime)，release构建通过cfg(debug_assertions)跳过日志初始化
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a654682` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
