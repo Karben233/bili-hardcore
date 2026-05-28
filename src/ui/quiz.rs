@@ -1,6 +1,10 @@
 use crate::app::{App, CaptchaFocus, CaptchaState, QuizPhase};
 use ratatui::style::{Color, Modifier, Style};
 
+fn strip_vendor_prefix(model: &str) -> &str {
+    model.rsplit_once('/').map(|(_, name)| name).unwrap_or(model)
+}
+
 /// 选中按钮样式：亮色文字 + 加粗
 fn selected_style(color: Color) -> Style {
     Style::default().fg(color).add_modifier(Modifier::BOLD)
@@ -175,13 +179,19 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             ])
             .split(inner);
 
+            let model_label = app
+                .config
+                .as_ref()
+                .map(|c| strip_vendor_prefix(&c.model).to_string())
+                .unwrap_or_else(|| "—".into());
+
             f.render_widget(
                 Gauge::default()
                     .gauge_style(Style::default().fg(Color::Cyan))
                     .ratio(progress.min(1.0))
                     .label(format!(
-                        "第 {}/100 题 | 得分: {} | 正确率: {}%",
-                        num, app.score, accuracy
+                        "{} | 第 {}/100 题 | 得分: {} | 正确率: {}%",
+                        model_label, num, app.score, accuracy
                     )),
                 outer[0],
             );
