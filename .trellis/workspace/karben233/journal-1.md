@@ -503,3 +503,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: 优化答题界面UI
+
+**Date**: 2026-05-28
+**Task**: 优化答题界面UI
+**Branch**: `refactor`
+
+### Summary
+
+左侧选项移至思考内容上方、添加题号显示、新增ShowingResult阶段展示答题结果1秒后自动进入下一题
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cd7987e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
