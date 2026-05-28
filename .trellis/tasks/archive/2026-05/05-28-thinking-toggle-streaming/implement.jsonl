@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/05-28-thinking-toggle-streaming/prd.md", "reason": "Full requirements: streaming LLM, thinking toggle, fallback parsing, UI layout"}
+{"file": ".trellis/tasks/05-28-thinking-toggle-streaming/research/llm-thinking-streaming.md", "reason": "Provider-specific SSE formats, reasoning_content field, reqwest streaming + eventsource-stream crate info"}

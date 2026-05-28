@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/05-28-thinking-toggle-streaming/prd.md", "reason": "Acceptance criteria: config toggle, streaming UI, thinking display, fallback parsing"}
+{"file": ".trellis/tasks/05-28-thinking-toggle-streaming/research/llm-thinking-streaming.md", "reason": "Verify reasoning_content parsing matches provider SSE formats"}
