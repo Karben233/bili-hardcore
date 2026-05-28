@@ -1,0 +1,228 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  RUST_VERSION: "1.95"
+
+concurrency:
+  group: manual-release-${{ inputs.tag }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS ARM64
+          - os: macos-14
+            platform: darwin-arm64
+            target: aarch64-apple-darwin
+            binary: bili-hardcore
+          # Windows x86_64
+          - os: windows-2022
+            platform: windows-x64
+            target: x86_64-pc-windows-msvc
+            binary: bili-hardcore.exe
+          # Linux x86_64 - MUSL (recommended, static linking)
+          - os: ubuntu-22.04
+            platform: linux-x64-musl
+            target: x86_64-unknown-linux-musl
+            binary: bili-hardcore
+            use_cross: true
+          # Linux x86_64 - GLIBC
+          - os: ubuntu-22.04
+            platform: linux-x64
+            target: x86_64-unknown-linux-gnu
+            binary: bili-hardcore
+          # Linux ARM64 - MUSL (recommended)
+          - os: ubuntu-22.04
+            platform: linux-arm64-musl
+            target: aarch64-unknown-linux-musl
+            binary: bili-hardcore
+            use_cross: true
+          # Linux ARM64 - GLIBC
+          - os: ubuntu-22.04
+            platform: linux-arm64
+            target: aarch64-unknown-linux-gnu
+            binary: bili-hardcore
+            use_cross: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use_cross == true
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Install Linux ARM64 cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build with cross
+        if: matrix.use_cross == true
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build with cargo
+        if: matrix.use_cross != true
+        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: bili-hardcore-${{ matrix.platform }}
+          path: dist/${{ matrix.binary }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-22.04
+    needs: [build]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+
+      - name: Display structure
+        run: ls -R artifacts/
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p release-assets
+          VERSION="${{ inputs.tag }}"
+
+          # macOS ARM64
+          if [ -f "artifacts/bili-hardcore-darwin-arm64/bili-hardcore" ]; then
+            tar -czf release-assets/bili-hardcore-${VERSION}-darwin-arm64.tar.gz \
+              -C artifacts/bili-hardcore-darwin-arm64 bili-hardcore
+          fi
+
+          # Windows
+          if [ -f "artifacts/bili-hardcore-windows-x64/bili-hardcore.exe" ]; then
+            cd artifacts/bili-hardcore-windows-x64
+            zip ../../release-assets/bili-hardcore-${VERSION}-windows-x64.zip bili-hardcore.exe
+            cd ../..
+          fi
+
+          # Linux x64 - MUSL
+          if [ -f "artifacts/bili-hardcore-linux-x64-musl/bili-hardcore" ]; then
+            tar -czf release-assets/bili-hardcore-${VERSION}-linux-x64-musl.tar.gz \
+              -C artifacts/bili-hardcore-linux-x64-musl bili-hardcore
+          fi
+
+          # Linux x64 - GLIBC
+          if [ -f "artifacts/bili-hardcore-linux-x64/bili-hardcore" ]; then
+            tar -czf release-assets/bili-hardcore-${VERSION}-linux-x64.tar.gz \
+              -C artifacts/bili-hardcore-linux-x64 bili-hardcore
+          fi
+
+          # Linux ARM64 - MUSL
+          if [ -f "artifacts/bili-hardcore-linux-arm64-musl/bili-hardcore" ]; then
+            tar -czf release-assets/bili-hardcore-${VERSION}-linux-arm64-musl.tar.gz \
+              -C artifacts/bili-hardcore-linux-arm64-musl bili-hardcore
+          fi
+
+          # Linux ARM64 - GLIBC
+          if [ -f "artifacts/bili-hardcore-linux-arm64/bili-hardcore" ]; then
+            tar -czf release-assets/bili-hardcore-${VERSION}-linux-arm64.tar.gz \
+              -C artifacts/bili-hardcore-linux-arm64 bili-hardcore
+          fi
+
+          # Include install scripts
+          cp install.sh release-assets/install.sh
+          cp install.ps1 release-assets/install.ps1
+          chmod +x release-assets/install.sh
+
+          # Generate checksums
+          (
+            cd release-assets
+            sha256sum * > checksums.txt
+          )
+
+          echo "=== Release assets ==="
+          ls -lh release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Bili Hardcore ${{ inputs.tag }}
+          draft: false
+          prerelease: false
+          body: |
+            ## Bili Hardcore ${{ inputs.tag }}
+
+            B站硬核会员自动答题工具
+
+            ### 📦 下载 / Downloads
+
+            | 平台 Platform | 文件 File |
+            |---------------|-----------|
+            | **macOS** (ARM64) | `bili-hardcore-${{ inputs.tag }}-darwin-arm64.tar.gz` |
+            | **Windows** (x64) | `bili-hardcore-${{ inputs.tag }}-windows-x64.zip` |
+            | **Linux** (x64 musl) | `bili-hardcore-${{ inputs.tag }}-linux-x64-musl.tar.gz` |
+            | **Linux** (x64 glibc) | `bili-hardcore-${{ inputs.tag }}-linux-x64.tar.gz` |
+            | **Linux** (ARM64 musl) | `bili-hardcore-${{ inputs.tag }}-linux-arm64-musl.tar.gz` |
+            | **Linux** (ARM64 glibc) | `bili-hardcore-${{ inputs.tag }}-linux-arm64.tar.gz` |
+
+            ### 🚀 快速安装 / Quick Install
+
+            **macOS / Linux (one-liner):**
+            ```bash
+            curl -fsSL https://github.com/Karben233/bili-hardcore/releases/latest/download/install.sh | bash
+            ```
+
+            **Windows (PowerShell):**
+            ```powershell
+            irm https://github.com/Karben233/bili-hardcore/releases/latest/download/install.ps1 | iex
+            ```
+
+            ### 💡 提示
+
+            - **Linux 用户建议优先使用 `-musl` 版本**（静态链接，无系统库依赖，兼容所有发行版）
+            - **macOS 提示**: 如遇 "无法验证开发者"，执行：`xattr -cr ~/.local/bin/bili-hardcore`
+            - 解压后赋予执行权限：`chmod +x bili-hardcore`
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
