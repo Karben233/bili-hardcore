@@ -1,5 +1,6 @@
 use crate::app::{App, CaptchaFocus, CaptchaState, QuizPhase};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
 
 fn strip_vendor_prefix(model: &str) -> &str {
     model.rsplit_once('/').map(|(_, name)| name).unwrap_or(model)
@@ -406,10 +407,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             }
             lines.push(String::new());
             if *score >= 60 {
-                lines.push("恭喜您通过了答题！".to_string());
+                lines.push("✅ 恭喜您通过了答题！".to_string());
             } else {
-                lines.push("未能通过答题，请重新运行程序再次答题".to_string());
-                lines.push("提示: 知识区和历史区的正确率会更高".to_string());
+                lines.push("❌ 未能通过答题，请重新运行程序再次答题".to_string());
+                lines.push("💡 提示: 知识区和历史区的正确率会更高".to_string());
             }
 
             let chunks = Layout::vertical([
@@ -430,13 +431,26 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                     .alignment(Alignment::Center),
                 chunks[0],
             );
-            f.render_widget(
-                Paragraph::new(lines.join("\n"))
-                    .style(if *score >= 60 {
-                        Style::default().fg(Color::Green)
+
+            let base_style = if *score >= 60 {
+                Style::default().fg(Color::Green)
+            } else {
+                Style::default().fg(Color::Red)
+            };
+            let result_idx = lines.iter().position(|l| l.starts_with('✅') || l.starts_with('❌')).unwrap_or(0);
+            let text: Vec<Line> = lines
+                .into_iter()
+                .enumerate()
+                .map(|(i, l)| {
+                    if i == result_idx {
+                        Line::from(Span::styled(l, base_style.add_modifier(Modifier::BOLD)))
                     } else {
-                        Style::default().fg(Color::Red)
-                    })
+                        Line::from(Span::styled(l, base_style))
+                    }
+                })
+                .collect();
+            f.render_widget(
+                Paragraph::new(text)
                     .alignment(Alignment::Center)
                     .wrap(Wrap { trim: true }),
                 chunks[1],
