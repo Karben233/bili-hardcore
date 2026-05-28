@@ -3,6 +3,17 @@ use ratatui::style::{Color, Modifier, Style};
 
 const LABELS: [&str; 3] = ["API URL", "模型名称", "API Key"];
 
+fn focus_index(focus: ConfigFocus) -> usize {
+    match focus {
+        ConfigFocus::BaseUrl => 0,
+        ConfigFocus::Model => 1,
+        ConfigFocus::ApiKey => 2,
+        ConfigFocus::ThinkingToggle => 3,
+        ConfigFocus::SaveBtn => 4,
+        ConfigFocus::ResetBtn => 5,
+    }
+}
+
 fn selected_style(color: Color) -> Style {
     Style::default().fg(color).add_modifier(Modifier::BOLD)
 }
@@ -32,16 +43,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         return;
     }
 
-    let focus = match app.cfg_focus {
-        ConfigFocus::BaseUrl => 0,
-        ConfigFocus::Model => 1,
-        ConfigFocus::ApiKey => 2,
-        ConfigFocus::SaveBtn => 3,
-        ConfigFocus::ResetBtn => 4,
-    };
+    let focus = focus_index(app.cfg_focus);
 
     let chunks = Layout::vertical([
         Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
@@ -92,6 +98,35 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             fi,
         );
     }
+
+    // Thinking toggle (chunks[4])
+    let thinking_focused = app.cfg_focus == ConfigFocus::ThinkingToggle;
+    let toggle_border_color = if thinking_focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+    let toggle_block = Block::default()
+        .borders(Borders::ALL)
+        .title(" 思考模式 ")
+        .style(Style::default().fg(toggle_border_color));
+    let toggle_inner = toggle_block.inner(chunks[4]);
+    f.render_widget(toggle_block, chunks[4]);
+
+    let toggle_text = if app.cfg_thinking {
+        "[✓] 开启 - AI 将展示推理过程"
+    } else {
+        "[ ] 关闭 - AI 直接给出答案"
+    };
+    let toggle_color = if thinking_focused {
+        Color::White
+    } else {
+        Color::DarkGray
+    };
+    f.render_widget(
+        Paragraph::new(toggle_text).style(Style::default().fg(toggle_color)),
+        toggle_inner,
+    );
 
     let save_color = if app.cfg_focus == ConfigFocus::SaveBtn {
         selected_style(Color::Green)

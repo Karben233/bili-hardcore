@@ -218,10 +218,34 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             let mut lines: Vec<Line> = vec![];
             match &app.phase {
                 QuizPhase::WaitingLlm => {
-                    lines.push(Line::from(Span::styled(
-                        format!("{} AI 思考中...", app.spin_char()),
-                        Style::default().fg(Color::Cyan),
-                    )));
+                    if !app.thinking_text.is_empty() {
+                        for line in app.thinking_text.lines() {
+                            lines.push(Line::from(Span::styled(
+                                line.to_string(),
+                                Style::default().fg(Color::DarkGray),
+                            )));
+                        }
+                        if !app.answer_text.is_empty() {
+                            lines.push(Line::from(Span::styled(
+                                "─".repeat(20),
+                                Style::default().fg(Color::DarkGray),
+                            )));
+                        }
+                    }
+                    if !app.answer_text.is_empty() {
+                        for line in app.answer_text.lines() {
+                            lines.push(Line::from(Span::styled(
+                                line.to_string(),
+                                Style::default().fg(Color::White),
+                            )));
+                        }
+                    }
+                    if app.thinking_text.is_empty() && app.answer_text.is_empty() {
+                        lines.push(Line::from(Span::styled(
+                            format!("{} AI 思考中...", app.spin_char()),
+                            Style::default().fg(Color::Cyan),
+                        )));
+                    }
                     lines.push(Line::from(""));
                 }
                 QuizPhase::Submitting => {

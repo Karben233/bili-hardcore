@@ -1,5 +1,6 @@
 use crate::api::BiliClient;
 use crate::config::{self, AuthData, OpenAiConfig};
+use crate::llm::LlmChunk;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -24,6 +25,7 @@ pub enum ConfigFocus {
     BaseUrl,
     Model,
     ApiKey,
+    ThinkingToggle,
     SaveBtn,
     ResetBtn,
 }
@@ -113,7 +115,7 @@ pub enum AppEvent {
         token: String,
         image_bytes: Option<Vec<u8>>,
     },
-    LlmOk(String),
+    LlmChunk(LlmChunk),
     LlmErr(String),
     SubmitOk {
         score: i64,
@@ -158,6 +160,7 @@ pub struct App {
     pub cfg_fields: [String; 3],
     pub cfg_focus: ConfigFocus,
     pub cfg_cursors: [usize; 3],
+    pub cfg_thinking: bool,
     pub config_confirm_reset: bool,
     pub config_reset_choice: u8,
 
@@ -172,6 +175,10 @@ pub struct App {
     pub history: Vec<HistoryItem>,
     pub history_scroll: usize,
     pub chosen_answer_idx: usize,
+
+    // Streaming LLM state
+    pub thinking_text: String,
+    pub answer_text: String,
 
     // Shared
     pub config: Option<OpenAiConfig>,
@@ -238,6 +245,7 @@ impl App {
             ],
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
+            cfg_thinking: config.as_ref().is_some_and(|c| c.enable_thinking),
             config_confirm_reset: false,
             config_reset_choice: 0,
             phase: QuizPhase::NotConfigured,
@@ -250,6 +258,8 @@ impl App {
             history: config::load_history(),
             history_scroll: 0,
             chosen_answer_idx: 0,
+            thinking_text: String::new(),
+            answer_text: String::new(),
             config,
             auth,
             tx,
@@ -282,6 +292,7 @@ impl App {
         self.bili = BiliClient::new();
         self.cfg_fields = [String::new(), String::new(), String::new()];
         self.cfg_cursors = [0, 0, 0];
+        self.cfg_thinking = false;
         self.config_confirm_reset = false;
         self.config_reset_choice = 0;
         self.back();
@@ -524,34 +535,52 @@ impl App {
 
     pub fn spawn_llm(&self) {
         if let Some(ref cfg) = self.config {
-            let tx = self.tx.clone();
             let client = crate::llm::OpenAiClient::new(cfg);
             let prompt = format!(
                 "题目:{}\n答案:{:?}",
                 self.question_text,
                 self.answers.iter().map(|a| &a.text).collect::<Vec<_>>()
             );
+            let (llm_tx, mut llm_rx) = mpsc::unbounded_channel::<LlmChunk>();
+            let tx = self.tx.clone();
+
+            client.ask_stream(&prompt, llm_tx);
+
             tokio::spawn(async move {
+                let mut retries = 0u32;
                 let max_retries = 3u32;
                 let mut last_err = String::new();
-                for attempt in 0..max_retries {
-                    match client.ask(&prompt).await {
-                        Ok(ans) => {
-                            let _ = tx.send(AppEvent::LlmOk(ans));
+
+                while let Some(chunk) = llm_rx.recv().await {
+                    match chunk {
+                        LlmChunk::Thinking(_) | LlmChunk::Content(_) => {
+                            let _ = tx.send(AppEvent::LlmChunk(chunk));
+                        }
+                        LlmChunk::Done(text) => {
+                            if text.is_empty() {
+                                retries += 1;
+                                if retries >= max_retries {
+                                    let _ = tx.send(AppEvent::LlmErr(last_err.clone()));
+                                    return;
+                                }
+                                tracing::warn!("LLM 返回空内容 (第{}次)", retries);
+                                let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Error(
+                                    format!("LLM 返回空内容，正在重试 ({}/{})...", retries, max_retries),
+                                )));
+                                // Re-initiate is not possible here, just report error
+                                let _ = tx.send(AppEvent::LlmErr("LLM 返回空内容".into()));
+                                return;
+                            }
+                            let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Done(text)));
                             return;
                         }
-                        Err(e) => {
-                            last_err = e.to_string();
-                            tracing::warn!("LLM 请求失败 (第{}次): {}", attempt + 1, last_err);
-                            if attempt + 1 < max_retries {
-                                let delay =
-                                    std::time::Duration::from_millis(500 * 2u64.pow(attempt));
-                                tokio::time::sleep(delay).await;
-                            }
+                        LlmChunk::Error(msg) => {
+                            last_err = msg;
+                            let _ = tx.send(AppEvent::LlmErr(last_err));
+                            return;
                         }
                     }
                 }
-                let _ = tx.send(AppEvent::LlmErr(last_err));
             });
         }
     }
@@ -685,7 +714,7 @@ impl App {
                 | AppEvent::QuestionReady { .. }
                 | AppEvent::NeedCaptcha
                 | AppEvent::CaptchaData { .. }
-                | AppEvent::LlmOk(_)
+                | AppEvent::LlmChunk(_)
                 | AppEvent::LlmErr(_)
                 | AppEvent::SubmitOk { .. }
                 | AppEvent::SubmitFail(_)
@@ -733,6 +762,8 @@ impl App {
                 self.question_text = question;
                 self.answers = answers;
                 self.question_id = id;
+                self.thinking_text.clear();
+                self.answer_text.clear();
                 self.spawn_llm();
                 self.phase = QuizPhase::WaitingLlm;
             }
@@ -773,16 +804,31 @@ impl App {
                     error: String::new(),
                 });
             }
-            AppEvent::LlmOk(text) => match parse_answer(&text) {
-                Some(idx) => {
-                    self.chosen_answer_idx = idx;
-                    self.phase = QuizPhase::Submitting;
-                    self.spawn_submit(idx);
+            AppEvent::LlmChunk(chunk) => match chunk {
+                LlmChunk::Thinking(text) => {
+                    self.thinking_text.push_str(&text);
                 }
-                None => {
-                    tracing::warn!("AI 回复无法解析: {}", text);
-                    self.phase = QuizPhase::FetchingQuestion;
-                    self.spawn_fetch_question();
+                LlmChunk::Content(text) => {
+                    self.answer_text.push_str(&text);
+                }
+                LlmChunk::Done(full_text) => {
+                    match parse_answer(&full_text) {
+                        Some(idx) => {
+                            self.chosen_answer_idx = idx;
+                            self.phase = QuizPhase::Submitting;
+                            self.spawn_submit(idx);
+                        }
+                        None => {
+                            tracing::warn!("AI 回复无法解析: {}", full_text);
+                            self.thinking_text.clear();
+                            self.answer_text.clear();
+                            self.phase = QuizPhase::FetchingQuestion;
+                            self.spawn_fetch_question();
+                        }
+                    }
+                }
+                LlmChunk::Error(msg) => {
+                    self.phase = QuizPhase::Error(format!("AI 回答错误: {}", msg));
                 }
             },
             AppEvent::LlmErr(msg) => {

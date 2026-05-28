@@ -83,6 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             base_url: url.trim_end_matches('/').to_string(),
             model,
             api_key: key,
+            enable_thinking: false,
         }),
         _ => None,
     };

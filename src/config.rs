@@ -10,6 +10,8 @@ pub struct OpenAiConfig {
     pub base_url: String,
     pub model: String,
     pub api_key: String,
+    #[serde(default)]
+    pub enable_thinking: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,13 +136,20 @@ pub fn save_history(history: &[HistoryItem]) -> Result<()> {
     Ok(())
 }
 
-/// LLM prompt 模板
-pub const QUIZ_PROMPT_TEMPLATE: &str = "\
-当前时间：{}
-你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：
-问题：大的反义词是什么？
-选项：['长', '宽', '小', '热']
-回答：3
-如果不确定正确答案，选择最接近的选项序号返回，不提供额外解释或超出 1-4 的内容。
----
-不要思考，直接回答我的问题：{}";
+/// 构建 LLM prompt
+pub fn build_quiz_prompt(timestamp: u64, question: &str, enable_thinking: bool) -> String {
+    let base = format!(
+        "当前时间：{}\n\
+         你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：\n\
+         问题：大的反义词是什么？\n\
+         选项：['长', '宽', '小', '热']\n\
+         回答：3\n\
+         如果不确定正确答案，选择最接近的选项序号返回，不提供额外解释或超出 1-4 的内容。",
+        timestamp
+    );
+    if enable_thinking {
+        format!("{}\n---\n{}", base, question)
+    } else {
+        format!("{}\n---\n不要思考，直接回答我的问题：{}", base, question)
+    }
+}
