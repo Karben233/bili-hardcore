@@ -470,3 +470,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: 流式输出 + 思考模式 toggle
+
+**Date**: 2026-05-28
+**Task**: 流式输出 + 思考模式 toggle
+**Branch**: `refactor`
+
+### Summary
+
+将 LLM 请求改为 SSE streaming，新增思考模式 toggle 配置，答题 UI 实时展示推理过程和答案。兼容硅基流动/百炼/DeepSeek 三家服务商。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a4472a2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

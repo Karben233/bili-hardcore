@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
-- **Last Active**: 2026-05-27
+- **Total Sessions**: 15
+- **Last Active**: 2026-05-28
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~472 | Active |
+| `journal-1.md` | ~505 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-05-28 | 流式输出 + 思考模式 toggle | `a4472a2` | `refactor` |
 | 14 | 2026-05-27 | 压缩release包体积 | `c37f50c` | `refactor` |
 | 13 | 2026-05-27 | 日志时区与release禁用 | `a654682` | `refactor` |
 | 12 | 2026-05-27 | 修复日志ANSI转义码与截断 | `87dbc13` | `refactor` |
