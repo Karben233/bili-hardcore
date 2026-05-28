@@ -26,6 +26,7 @@ pub enum ConfigFocus {
     Model,
     ApiKey,
     ThinkingToggle,
+    FastModeToggle,
     SaveBtn,
     ResetBtn,
 }
@@ -164,6 +165,7 @@ pub struct App {
     pub cfg_focus: ConfigFocus,
     pub cfg_cursors: [usize; 3],
     pub cfg_thinking: bool,
+    pub cfg_fast_mode: bool,
     pub config_confirm_reset: bool,
     pub config_reset_choice: u8,
 
@@ -249,6 +251,7 @@ impl App {
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
             cfg_thinking: config.as_ref().is_some_and(|c| c.enable_thinking),
+            cfg_fast_mode: config.as_ref().is_some_and(|c| c.enable_fast_mode),
             config_confirm_reset: false,
             config_reset_choice: 0,
             phase: QuizPhase::NotConfigured,
@@ -868,7 +871,7 @@ impl App {
                 self.score = score;
                 self.phase = QuizPhase::ShowingResult {
                     correct,
-                    countdown: 10,
+                    countdown: if self.cfg_fast_mode { 1 } else { 10 },
                 };
             }
             AppEvent::SubmitFail(msg) => {

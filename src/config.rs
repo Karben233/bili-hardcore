@@ -12,6 +12,8 @@ pub struct OpenAiConfig {
     pub api_key: String,
     #[serde(default)]
     pub enable_thinking: bool,
+    #[serde(default)]
+    pub enable_fast_mode: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

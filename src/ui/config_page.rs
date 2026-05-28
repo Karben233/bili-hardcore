@@ -9,8 +9,9 @@ fn focus_index(focus: ConfigFocus) -> usize {
         ConfigFocus::Model => 1,
         ConfigFocus::ApiKey => 2,
         ConfigFocus::ThinkingToggle => 3,
-        ConfigFocus::SaveBtn => 4,
-        ConfigFocus::ResetBtn => 5,
+        ConfigFocus::FastModeToggle => 4,
+        ConfigFocus::SaveBtn => 5,
+        ConfigFocus::ResetBtn => 6,
     }
 }
 
@@ -47,6 +48,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
     let chunks = Layout::vertical([
         Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
@@ -128,6 +130,35 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         toggle_inner,
     );
 
+    // Fast mode toggle (chunks[5])
+    let fast_focused = app.cfg_focus == ConfigFocus::FastModeToggle;
+    let fast_border_color = if fast_focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+    let fast_block = Block::default()
+        .borders(Borders::ALL)
+        .title(" 快速模式 ")
+        .style(Style::default().fg(fast_border_color));
+    let fast_inner = fast_block.inner(chunks[5]);
+    f.render_widget(fast_block, chunks[5]);
+
+    let fast_text = if app.cfg_fast_mode {
+        "[✓] 开启 - 取消答题间隔"
+    } else {
+        "[ ] 关闭 - 每题间隔约1秒"
+    };
+    let fast_color = if fast_focused {
+        Color::White
+    } else {
+        Color::DarkGray
+    };
+    f.render_widget(
+        Paragraph::new(fast_text).style(Style::default().fg(fast_color)),
+        fast_inner,
+    );
+
     let save_color = if app.cfg_focus == ConfigFocus::SaveBtn {
         selected_style(Color::Green)
     } else {
@@ -137,7 +168,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new("[ 保存 ]")
             .style(save_color)
             .alignment(Alignment::Center),
-        chunks[5],
+        chunks[6],
     );
 
     let reset_color = if app.cfg_focus == ConfigFocus::ResetBtn {
@@ -149,14 +180,14 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new("[ 重置 ]")
             .style(reset_color)
             .alignment(Alignment::Center),
-        chunks[6],
+        chunks[7],
     );
 
     f.render_widget(
-        Paragraph::new("↑↓ 切换  Enter 确认  ESC 返回")
+        Paragraph::new("↑↓ 切换  Space 勾选  Enter 确认  ESC 返回")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
-        chunks[7],
+        chunks[8],
     );
 }
 

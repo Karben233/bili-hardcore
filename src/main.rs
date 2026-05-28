@@ -84,6 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             model,
             api_key: key,
             enable_thinking: false,
+            enable_fast_mode: false,
         }),
         _ => None,
     };
