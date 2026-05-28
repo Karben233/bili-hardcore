@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  RUST_VERSION: "1.85"
+  RUST_VERSION: "1.95"
 
 concurrency:
   group: release-${{ github.ref_name }}
