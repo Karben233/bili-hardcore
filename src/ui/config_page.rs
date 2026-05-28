@@ -116,9 +116,9 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     f.render_widget(toggle_block, chunks[4]);
 
     let toggle_text = if app.cfg_thinking {
-        "[✓] 开启 - AI 将展示推理过程"
+        "[✓] 开启 - 准确率高，速度慢，可能存在兼容性问题"
     } else {
-        "[ ] 关闭 - AI 直接给出答案"
+        "[ ] 关闭 - 准确率低，速度快"
     };
     let toggle_color = if thinking_focused {
         Color::White
