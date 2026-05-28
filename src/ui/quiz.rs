@@ -159,7 +159,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
         }
 
-        QuizPhase::WaitingLlm | QuizPhase::Submitting => {
+        QuizPhase::WaitingLlm | QuizPhase::Submitting | QuizPhase::ShowingResult { .. } => {
             let num = app.question_num;
             let accuracy = if num > 0 {
                 (app.score as f64 / num as f64 * 100.0) as u32
@@ -212,66 +212,95 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             let left =
                 Layout::vertical([Constraint::Length(3), Constraint::Min(3)]).split(left_inner);
 
-            f.render_widget(
-                Paragraph::new(format!("题目: {}", app.question_text))
-                    .style(
+            {
+                use ratatui::text::{Line, Span};
+                let q_title = Line::from(vec![
+                    Span::styled(
+                        format!("Q{}. ", app.question_num),
+                        Style::default().fg(Color::Yellow),
+                    ),
+                    Span::styled(
+                        app.question_text.clone(),
                         Style::default()
                             .fg(Color::White)
                             .add_modifier(Modifier::BOLD),
-                    )
-                    .wrap(Wrap { trim: true }),
-                left[0],
-            );
+                    ),
+                ]);
+                f.render_widget(
+                    Paragraph::new(q_title).wrap(Wrap { trim: true }),
+                    left[0],
+                );
+            }
 
             use ratatui::text::{Line, Span};
 
             let mut lines: Vec<Line> = vec![];
-            match &app.phase {
-                QuizPhase::WaitingLlm => {
-                    if !app.thinking_text.is_empty() {
-                        for line in app.thinking_text.lines() {
-                            lines.push(Line::from(Span::styled(
-                                line.to_string(),
-                                Style::default().fg(Color::DarkGray),
-                            )));
-                        }
-                        if !app.answer_text.is_empty() {
-                            lines.push(Line::from(Span::styled(
-                                "─".repeat(20),
-                                Style::default().fg(Color::DarkGray),
-                            )));
-                        }
-                    }
-                    if !app.answer_text.is_empty() {
-                        for line in app.answer_text.lines() {
-                            lines.push(Line::from(Span::styled(
-                                line.to_string(),
-                                Style::default().fg(Color::White),
-                            )));
-                        }
-                    }
-                    if app.thinking_text.is_empty() && app.answer_text.is_empty() {
+
+            // Determine result color for ShowingResult phase
+            let result_color = match &app.phase {
+                QuizPhase::ShowingResult { correct, .. } => {
+                    Some(if *correct { Color::Green } else { Color::Red })
+                }
+                _ => None,
+            };
+
+            // Options (always on top, highlighted during ShowingResult)
+            for (i, a) in app.answers.iter().enumerate() {
+                let label = (b'A' + i as u8) as char;
+                if let Some(color) = result_color {
+                    if i + 1 == app.chosen_answer_idx {
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                format!("  > {}. ", label),
+                                Style::default().fg(color).add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(a.text.clone(), Style::default().fg(color)),
+                        ]));
+                    } else {
                         lines.push(Line::from(Span::styled(
-                            format!("{} AI 思考中...", app.spin_char()),
-                            Style::default().fg(Color::Cyan),
+                            format!("    {}. {}", label, a.text),
+                            Style::default().fg(Color::DarkGray),
                         )));
                     }
-                    lines.push(Line::from(""));
+                } else {
+                    lines.push(Line::from(Span::styled(
+                        format!("{}. {}", label, a.text),
+                        Style::default().fg(Color::White),
+                    )));
+                }
+            }
+            lines.push(Line::from(""));
+
+            // Phase-specific status line (always visible)
+            match &app.phase {
+                QuizPhase::WaitingLlm => {
+                    lines.push(Line::from(Span::styled(
+                        format!("{} AI 思考中...", app.spin_char()),
+                        Style::default().fg(Color::Cyan),
+                    )));
                 }
                 QuizPhase::Submitting => {
                     lines.push(Line::from(Span::styled(
                         format!("正在提交第 {} 题答案...", num),
                         Style::default().fg(Color::Cyan),
                     )));
-                    lines.push(Line::from(""));
+                }
+                QuizPhase::ShowingResult { correct, .. } => {
+                    let mark = if *correct { "✓ 回答正确" } else { "✗ 回答错误" };
+                    let mark_color = if *correct { Color::Green } else { Color::Red };
+                    lines.push(Line::from(Span::styled(
+                        mark.to_string(),
+                        Style::default().fg(mark_color).add_modifier(Modifier::BOLD),
+                    )));
                 }
                 _ => {}
             }
-            for (i, a) in app.answers.iter().enumerate() {
-                let label = (b'A' + i as u8) as char;
+            lines.push(Line::from(""));
+            // Thinking content (shared across all phases)
+            for line in app.thinking_text.lines() {
                 lines.push(Line::from(Span::styled(
-                    format!("{}. {}", label, a.text),
-                    Style::default().fg(Color::White),
+                    line.to_string(),
+                    Style::default().fg(Color::DarkGray),
                 )));
             }
             f.render_widget(

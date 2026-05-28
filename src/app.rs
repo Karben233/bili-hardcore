@@ -47,6 +47,10 @@ pub enum QuizPhase {
     FetchingQuestion,
     WaitingLlm,
     Submitting,
+    ShowingResult {
+        correct: bool,
+        countdown: u8,
+    },
     Captcha(CaptchaState),
     Finished {
         score: i64,
@@ -119,7 +123,6 @@ pub enum AppEvent {
     LlmErr(String),
     SubmitOk {
         score: i64,
-        num: u32,
     },
     SubmitFail(String),
     QuizDone {
@@ -313,6 +316,33 @@ impl App {
 
     pub fn tick(&mut self) {
         self.spinner = (self.spinner + 1) % SPINNER.len();
+
+        // ShowingResult countdown (~100ms/tick, 5 ticks = 0.5s)
+        if let QuizPhase::ShowingResult { correct, countdown } = self.phase {
+            if countdown > 1 {
+                self.phase = QuizPhase::ShowingResult {
+                    correct,
+                    countdown: countdown - 1,
+                };
+            } else {
+                // countdown reached 0 → proceed to next question
+                let num = self.question_num;
+                self.history.push(HistoryItem {
+                    num: self.question_num,
+                    question: self.question_text.clone(),
+                    options: self.answers.iter().map(|a| a.text.clone()).collect(),
+                    chosen_idx: self.chosen_answer_idx,
+                    correct,
+                });
+                let _ = config::save_history(&self.history);
+                if num < 100 {
+                    self.phase = QuizPhase::FetchingQuestion;
+                    self.spawn_fetch_question();
+                } else {
+                    self.fetch_final();
+                }
+            }
+        }
 
         // QR 轮询 countdown
         if let QuizPhase::WaitingScan {
@@ -595,17 +625,16 @@ impl App {
         let qid = self.question_id;
         let hash = ans.hash.clone();
         let text = ans.text.clone();
-        let num = self.question_num;
         tokio::spawn(async move {
             match bili.question_submit(qid, &hash, &text).await {
                 Ok(resp) if resp["code"].as_i64() == Some(0) => {
                     match bili.question_result().await {
                         Ok(r) => {
                             let s = r["score"].as_i64().unwrap_or(0);
-                            let _ = tx.send(AppEvent::SubmitOk { score: s, num });
+                            let _ = tx.send(AppEvent::SubmitOk { score: s });
                         }
                         Err(_) => {
-                            let _ = tx.send(AppEvent::SubmitOk { score: 0, num });
+                            let _ = tx.send(AppEvent::SubmitOk { score: 0 });
                         }
                     }
                 }
@@ -834,24 +863,13 @@ impl App {
             AppEvent::LlmErr(msg) => {
                 self.phase = QuizPhase::Error(format!("AI 回答错误: {}", msg));
             }
-            AppEvent::SubmitOk { score, num } => {
+            AppEvent::SubmitOk { score } => {
                 let correct = score > self.score;
-                let options: Vec<String> = self.answers.iter().map(|a| a.text.clone()).collect();
-                self.history.push(HistoryItem {
-                    num: self.question_num,
-                    question: self.question_text.clone(),
-                    options,
-                    chosen_idx: self.chosen_answer_idx,
-                    correct,
-                });
-                let _ = config::save_history(&self.history);
                 self.score = score;
-                if num < 100 {
-                    self.phase = QuizPhase::FetchingQuestion;
-                    self.spawn_fetch_question();
-                } else {
-                    self.fetch_final();
-                }
+                self.phase = QuizPhase::ShowingResult {
+                    correct,
+                    countdown: 10,
+                };
             }
             AppEvent::SubmitFail(msg) => {
                 self.phase = QuizPhase::Error(msg);
