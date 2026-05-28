@@ -65,7 +65,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@master
@@ -105,7 +105,7 @@ jobs:
           cp target/${{ matrix.target }}/release/${{ matrix.binary }} dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bili-hardcore-${{ matrix.platform }}
           path: dist/${{ matrix.binary }}
@@ -118,13 +118,13 @@ jobs:
     needs: build
     steps:
       - name: Download ARM64 binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: bili-hardcore-darwin-arm64
           path: arm64
 
       - name: Download x64 binary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: bili-hardcore-darwin-x64
           path: x64
@@ -137,7 +137,7 @@ jobs:
           file universal/bili-hardcore
 
       - name: Upload universal artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bili-hardcore-darwin-universal
           path: universal/bili-hardcore
@@ -151,10 +151,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
 
