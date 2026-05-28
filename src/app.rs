@@ -342,6 +342,7 @@ impl App {
                     self.phase = QuizPhase::FetchingQuestion;
                     self.spawn_fetch_question();
                 } else {
+                    self.phase = QuizPhase::Submitting;
                     self.fetch_final();
                 }
             }
