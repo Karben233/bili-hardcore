@@ -9,6 +9,17 @@ B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
 
 ## 安装
 
+> 之前用过 0.x 版本的老用户请先删除配置文件：
+> ```bash
+> # macOS / Linux
+> rm -rf ~/.bili-hardcore
+> ```
+> ```powershell
+> # Windows (PowerShell)
+> Remove-Item -Recurse -Force "$env:USERPROFILE\.bili-hardcore"
+> ```
+
+
 ### 快速安装（推荐）
 
 **macOS / Linux:**
@@ -43,7 +54,7 @@ chmod +x bili-hardcore
 
 ### 从源码构建
 
-需要 Rust 1.85 及以上版本：
+需要 Rust 1.88 及以上版本：
 
 ```bash
 git clone https://github.com/Karben233/bili-hardcore.git
@@ -73,4 +84,4 @@ bili-hardcore uninstall          # 交互式卸载
 ```
 
 ## 运行截图
-![PixPin_2025-04-08_15-45-29](https://github.com/user-attachments/assets/70b3930c-c60f-43f7-8d82-c5225997ebc5)
+![运行截图](screenshot.png)
