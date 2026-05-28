@@ -201,6 +201,9 @@ pub struct App {
 
     // Captcha refresh: preserve selections and focus
     pub captcha_preserve: Option<(Vec<bool>, usize, CaptchaFocus, String)>,
+
+    // Selected category names for LLM prompt
+    pub selected_categories: Vec<String>,
 }
 
 impl App {
@@ -276,6 +279,7 @@ impl App {
             captcha_picker,
             captcha_image: None,
             captcha_preserve: None,
+            selected_categories: config::load_categories(),
         }
     }
 
@@ -578,7 +582,14 @@ impl App {
             let (llm_tx, mut llm_rx) = mpsc::unbounded_channel::<LlmChunk>();
             let tx = self.tx.clone();
 
-            client.ask_stream(&prompt, llm_tx);
+            let full_prompt = crate::config::build_quiz_prompt(
+                &self.selected_categories,
+                &prompt,
+                cfg.enable_thinking,
+            );
+            tracing::info!("LLM prompt:\n{}", full_prompt);
+
+            client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx);
 
             tokio::spawn(async move {
                 let mut retries = 0u32;

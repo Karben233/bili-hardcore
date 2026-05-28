@@ -54,6 +54,7 @@ fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dy
     let file_appender = tracing_appender::rolling::never(log_dir, "bili-hardcore.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
         .with_writer(non_blocking)
         .with_ansi(false)
         .with_target(false)

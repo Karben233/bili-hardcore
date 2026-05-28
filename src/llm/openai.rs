@@ -2,7 +2,7 @@ use crate::config::{OpenAiConfig, build_quiz_prompt};
 use eventsource_stream::Eventsource;
 use futures::StreamExt;
 use reqwest::Client;
-use std::time::{SystemTime, UNIX_EPOCH};
+
 use tokio::sync::mpsc;
 
 #[derive(Debug)]
@@ -33,13 +33,8 @@ impl OpenAiClient {
         }
     }
 
-    pub fn ask_stream(&self, question: &str, tx: mpsc::UnboundedSender<LlmChunk>) {
-        let ts = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        let prompt = build_quiz_prompt(ts, question, self.enable_thinking);
+    pub fn ask_stream(&self, question: &str, categories: Vec<String>, tx: mpsc::UnboundedSender<LlmChunk>) {
+        let prompt = build_quiz_prompt(&categories, question, self.enable_thinking);
 
         let mut body = serde_json::json!({
             "model": self.model,

@@ -1,5 +1,5 @@
 use crate::app::*;
-use crate::config::OpenAiConfig;
+use crate::config::{self, OpenAiConfig};
 use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::app::CaptchaFocus;
@@ -335,6 +335,13 @@ impl App {
                 } else if ids.is_empty() {
                     CaptchaState { error: "请选择分类".into(), ..cs }
                 } else {
+                    self.selected_categories = cs
+                        .categories
+                        .iter()
+                        .filter(|c| c.selected)
+                        .map(|c| c.name.clone())
+                        .collect();
+                    let _ = config::save_categories(&self.selected_categories);
                     self.spawn_captcha_submit(&cs.input, &cs.captcha_token, &ids);
                     self.phase = QuizPhase::FetchingQuestion;
                     return;

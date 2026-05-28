@@ -186,13 +186,18 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 .map(|c| strip_vendor_prefix(&c.model).to_string())
                 .unwrap_or_else(|| "—".into());
 
+            let cat_str = if app.selected_categories.is_empty() {
+                String::new()
+            } else {
+                format!(" | 分区: {}", app.selected_categories.join("/"))
+            };
             f.render_widget(
                 Gauge::default()
                     .gauge_style(Style::default().fg(Color::Cyan))
                     .ratio(progress.min(1.0))
                     .label(format!(
-                        "{} | 第 {}/100 题 | 得分: {} | 正确率: {}%",
-                        model_label, num, app.score, accuracy
+                        "{} | 第 {}/100 题 | 得分: {} | 正确率: {}%{}",
+                        model_label, num, app.score, accuracy, cat_str
                     )),
                 outer[0],
             );

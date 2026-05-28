@@ -110,6 +110,32 @@ pub fn delete_auth() -> Result<()> {
     Ok(())
 }
 
+// --- Selected Categories ---
+
+pub fn categories_path() -> PathBuf {
+    config_dir().join("categories.json")
+}
+
+pub fn load_categories() -> Vec<String> {
+    let path = categories_path();
+    if !path.exists() {
+        return vec![];
+    }
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+pub fn save_categories(categories: &[String]) -> Result<()> {
+    ensure_config_dir()?;
+    let path = categories_path();
+    let content = serde_json::to_string_pretty(categories).context("序列化分类失败")?;
+    fs::write(&path, content).context("写入分类失败")?;
+    Ok(())
+}
+
 // --- Quiz History ---
 
 use crate::app::HistoryItem;
@@ -139,15 +165,19 @@ pub fn save_history(history: &[HistoryItem]) -> Result<()> {
 }
 
 /// 构建 LLM prompt
-pub fn build_quiz_prompt(timestamp: u64, question: &str, enable_thinking: bool) -> String {
+pub fn build_quiz_prompt(categories: &[String], question: &str, enable_thinking: bool) -> String {
+    let cat_str = if categories.is_empty() {
+        "未知".to_string()
+    } else {
+        categories.join("、")
+    };
     let base = format!(
-        "当前时间：{}\n\
-         你是一个高效精准的答题专家，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：\n\
+        "你是一个资深B站用户，目前正在完成硬核会员试炼考试，考试内容涉及的分区：[{}]，面对选择题时，直接根据问题和选项判断正确答案，并返回对应选项的序号（1, 2, 3, 4）。示例：\n\
          问题：大的反义词是什么？\n\
          选项：['长', '宽', '小', '热']\n\
          回答：3\n\
          如果不确定正确答案，选择最接近的选项序号返回，不提供额外解释或超出 1-4 的内容。",
-        timestamp
+        cat_str
     );
     if enable_thinking {
         format!("{}\n---\n{}", base, question)
