@@ -72,15 +72,9 @@ bili-hardcore <url> <model> -k <api-key>   # 通过命令行参数直接启动
 ```
 
 ### 命令
-```
-update      更新到最新版本
-uninstall   卸载 bili-hardcore
-```
-
-### 示例
 ```bash
 bili-hardcore update             # 检查并更新到最新版本
-bili-hardcore uninstall          # 交互式卸载
+bili-hardcore uninstall          # 卸载
 ```
 
 ## 运行截图
