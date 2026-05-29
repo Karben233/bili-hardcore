@@ -25,39 +25,39 @@ jobs:
       matrix:
         include:
           # macOS ARM64
-          - os: macos-14
+          - os: macos-latest
             platform: darwin-arm64
             target: aarch64-apple-darwin
             binary: bili-hardcore
           # macOS x86_64
-          - os: macos-13
+          - os: macos-15-intel
             platform: darwin-x64
             target: x86_64-apple-darwin
             binary: bili-hardcore
           # Windows x86_64
-          - os: windows-2022
+          - os: windows-latest
             platform: windows-x64
             target: x86_64-pc-windows-msvc
             binary: bili-hardcore.exe
           # Linux x86_64 - MUSL (recommended, static linking)
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             platform: linux-x64-musl
             target: x86_64-unknown-linux-musl
             binary: bili-hardcore
             use_cross: true
           # Linux x86_64 - GLIBC
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             platform: linux-x64
             target: x86_64-unknown-linux-gnu
             binary: bili-hardcore
           # Linux ARM64 - MUSL (recommended)
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             platform: linux-arm64-musl
             target: aarch64-unknown-linux-musl
             binary: bili-hardcore
             use_cross: true
           # Linux ARM64 - GLIBC
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             platform: linux-arm64
             target: aarch64-unknown-linux-gnu
             binary: bili-hardcore
@@ -65,7 +65,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@master
@@ -105,7 +105,7 @@ jobs:
           cp target/${{ matrix.target }}/release/${{ matrix.binary }} dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bili-hardcore-${{ matrix.platform }}
           path: dist/${{ matrix.binary }}
@@ -114,17 +114,17 @@ jobs:
   # Create macOS universal binary
   universal-macos:
     name: Universal macOS Binary
-    runs-on: macos-14
+    runs-on: macos-latest
     needs: build
     steps:
       - name: Download ARM64 binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: bili-hardcore-darwin-arm64
           path: arm64
 
       - name: Download x64 binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: bili-hardcore-darwin-x64
           path: x64
@@ -137,7 +137,7 @@ jobs:
           file universal/bili-hardcore
 
       - name: Upload universal artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bili-hardcore-darwin-universal
           path: universal/bili-hardcore
@@ -145,16 +145,16 @@ jobs:
 
   release:
     name: Create Release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: [build, universal-macos]
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -247,14 +247,14 @@ jobs:
 
             | 平台 Platform | 文件 File |
             |---------------|-----------|
-            | **macOS** (Universal) | `bili-hardcore-${{ github.ref_name }}-darwin-universal.tar.gz` |
-            | **macOS** (ARM64) | `bili-hardcore-${{ github.ref_name }}-darwin-arm64.tar.gz` |
-            | **macOS** (x64) | `bili-hardcore-${{ github.ref_name }}-darwin-x64.tar.gz` |
-            | **Windows** (x64) | `bili-hardcore-${{ github.ref_name }}-windows-x64.zip` |
-            | **Linux** (x64 musl) | `bili-hardcore-${{ github.ref_name }}-linux-x64-musl.tar.gz` |
-            | **Linux** (x64 glibc) | `bili-hardcore-${{ github.ref_name }}-linux-x64.tar.gz` |
-            | **Linux** (ARM64 musl) | `bili-hardcore-${{ github.ref_name }}-linux-arm64-musl.tar.gz` |
-            | **Linux** (ARM64 glibc) | `bili-hardcore-${{ github.ref_name }}-linux-arm64.tar.gz` |
+            | **macOS** (Universal) | [darwin-universal.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-darwin-universal.tar.gz) |
+            | **macOS** (ARM64) | [darwin-arm64.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-darwin-arm64.tar.gz) |
+            | **macOS** (x64) | [darwin-x64.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-darwin-x64.tar.gz) |
+            | **Windows** (x64) | [windows-x64.zip](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-windows-x64.zip) |
+            | **Linux** (x64 musl) | [linux-x64-musl.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-x64-musl.tar.gz) |
+            | **Linux** (x64 glibc) | [linux-x64.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-x64.tar.gz) |
+            | **Linux** (ARM64 musl) | [linux-arm64-musl.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-arm64-musl.tar.gz) |
+            | **Linux** (ARM64 glibc) | [linux-arm64.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-arm64.tar.gz) |
 
             ### 🚀 快速安装 / Quick Install
 
