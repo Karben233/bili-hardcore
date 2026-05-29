@@ -28,7 +28,7 @@ dirs = "6"
 urlencoding = "2"
 unicode-width = "0.2"
 ratatui-image = { version = "9", default-features = false, features = ["crossterm"] }
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 webbrowser = "1"
 
 [profile.release]
