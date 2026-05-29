@@ -98,4 +98,4 @@ if ! echo ":${PATH}:" | grep -q ":${INSTALL_DIR}:"; then
   echo ""
 fi
 
-info "运行 '${BINARY} --help' 开始使用"
+info "运行 '${BINARY}' 开始使用, '${BINARY} --help' 了解更多命令"

@@ -41,4 +41,4 @@ if ($userPath -notlike "*$InstallDir*") {
 Remove-Item -Recurse -Force $tmpdir
 
 Write-Host "[info] 安装完成: $InstallDir\$BINARY" -ForegroundColor Green
-Write-Host "[info] 运行 'bili-hardcore --help' 开始使用" -ForegroundColor Green
+Write-Host "[info] 运行 'bili-hardcore' 开始使用, 'bili-hardcore --help' 了解更多命令" -ForegroundColor Green
