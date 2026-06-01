@@ -202,21 +202,114 @@ fn uninstall() -> Result<(), Box<dyn std::error::Error>> {
 
 const REPO: &str = "Karben233/bili-hardcore";
 
+/// 通过 GitHub API 获取最新 release 的 tag 名称
+async fn fetch_latest_tag_via_api(
+    client: &reqwest::Client,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let resp = client
+        .get(format!("https://api.github.com/repos/{REPO}/releases/latest"))
+        .header("User-Agent", "bili-hardcore")
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        return Err(format!("GitHub API 返回 HTTP {}", resp.status()).into());
+    }
+
+    let release: serde_json::Value = resp.json().await?;
+    release["tag_name"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "API 响应中缺少 tag_name 字段".into())
+}
+
+/// 通过 GitHub releases 页面的 redirect 获取最新 tag（无需 API，不受 rate limit 限制）
+async fn fetch_latest_tag_via_redirect(
+    client: &reqwest::Client,
+) -> Result<String, Box<dyn std::error::Error>> {
+    // 不跟随 redirect，从 Location 头中提取 tag
+    let resp = client
+        .get(format!("https://github.com/{REPO}/releases/latest"))
+        .header("User-Agent", "bili-hardcore")
+        .send()
+        .await?;
+
+    // 即使跟随了 redirect，也可以从最终 URL 中提取
+    let final_url = resp.url().to_string();
+    // URL 格式: https://github.com/Karben233/bili-hardcore/releases/tag/v1.0.1-beta
+    if let Some(tag) = final_url
+        .rsplit('/')
+        .next()
+        .filter(|s| s.starts_with('v'))
+    {
+        return Ok(tag.to_string());
+    }
+
+    // 尝试从 Location header 获取（当不跟随 redirect 时）
+    if let Some(location) = resp.headers().get("location").and_then(|v| v.to_str().ok()) {
+        if let Some(tag) = location.rsplit('/').next().filter(|s| s.starts_with('v')) {
+            return Ok(tag.to_string());
+        }
+    }
+
+    Err("无法从 GitHub releases 页面获取最新版本号".into())
+}
+
+/// 通过 GitHub tags API 获取最新 tag（作为第三备选）
+async fn fetch_latest_tag_via_tags(
+    client: &reqwest::Client,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let resp = client
+        .get(format!("https://api.github.com/repos/{REPO}/tags?per_page=1"))
+        .header("User-Agent", "bili-hardcore")
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        return Err(format!("GitHub Tags API 返回 HTTP {}", resp.status()).into());
+    }
+
+    let tags: serde_json::Value = resp.json().await?;
+    tags.get(0)
+        .and_then(|t| t["name"].as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Tags API 响应中无 tag 数据".into())
+}
+
 async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
     let current_version = env!("CARGO_PKG_VERSION");
     println!("当前版本: v{current_version}");
 
     println!("正在检查最新版本...");
     let client = reqwest::Client::new();
-    let release: serde_json::Value = client
-        .get(format!("https://api.github.com/repos/{REPO}/releases/latest"))
-        .header("User-Agent", "bili-hardcore")
-        .send()
-        .await?
-        .json()
-        .await?;
 
-    let latest_tag = release["tag_name"].as_str().unwrap_or("unknown");
+    // 依次尝试三种方式获取最新版本号
+    let latest_tag = match fetch_latest_tag_via_api(&client).await {
+        Ok(tag) => tag,
+        Err(api_err) => {
+            eprintln!("  提示: GitHub API 请求失败（{}），尝试备用方式...", api_err);
+            match fetch_latest_tag_via_redirect(&client).await {
+                Ok(tag) => tag,
+                Err(redirect_err) => {
+                    eprintln!("  提示: 页面重定向方式也失败了（{}），尝试 Tags API...", redirect_err);
+                    match fetch_latest_tag_via_tags(&client).await {
+                        Ok(tag) => tag,
+                        Err(tags_err) => {
+                            eprintln!("  所有获取版本号的方式均已失败:");
+                            eprintln!("    1. GitHub API: {api_err}");
+                            eprintln!("    2. 页面重定向: {redirect_err}");
+                            eprintln!("    3. Tags API: {tags_err}");
+                            eprintln!();
+                            eprintln!("  可能的原因: 网络连接问题、GitHub API 频率限制、DNS 解析失败");
+                            eprintln!("  建议: 请稍后重试，或手动访问 https://github.com/{REPO}/releases 下载最新版本");
+                            std::process::exit(1);
+                        }
+                    }
+                }
+            }
+        }
+    };
+
     let latest_version = latest_tag.trim_start_matches('v');
     println!("最新版本: {latest_tag}");
 
