@@ -1,6 +1,6 @@
 [package]
 name = "bili-hardcore"
-version = "1.0.0-beta"
+version = "1.0.1-beta"
 edition = "2024"
 description = "B站硬核会员自动答题工具"
 
