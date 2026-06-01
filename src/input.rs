@@ -176,7 +176,7 @@ impl App {
                 KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.spawn_login();
                 }
-                KeyCode::Char('b') | KeyCode::Char('B') => {
+                KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     let qr_url = format!(
                         "https://api.cl2wm.cn/api/qrcode/code?text={}",
                         urlencoding::encode(url)
@@ -234,13 +234,8 @@ impl App {
                 error: String::new(),
                 ..cs
             },
-            KeyCode::Up if matches!(cs.focus, CaptchaFocus::OpenBrowser) => CaptchaState {
-                focus: CaptchaFocus::Categories,
-                error: String::new(),
-                ..cs
-            },
             KeyCode::Up if matches!(cs.focus, CaptchaFocus::Input) => CaptchaState {
-                focus: CaptchaFocus::OpenBrowser,
+                focus: CaptchaFocus::Categories,
                 error: String::new(),
                 ..cs
             },
@@ -261,11 +256,6 @@ impl App {
                 }
             }
             KeyCode::Down if matches!(cs.focus, CaptchaFocus::Categories) => CaptchaState {
-                focus: CaptchaFocus::OpenBrowser,
-                error: String::new(),
-                ..cs
-            },
-            KeyCode::Down if matches!(cs.focus, CaptchaFocus::OpenBrowser) => CaptchaState {
                 focus: CaptchaFocus::Input,
                 error: String::new(),
                 ..cs
@@ -307,6 +297,11 @@ impl App {
                 self.phase = QuizPhase::FetchingQuestion;
                 return;
             }
+            // Ctrl+B: open captcha in browser (must be before generic Char(c))
+            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                let _ = webbrowser::open(&cs.captcha_url);
+                cs
+            }
             // Character input (only in Input focus)
             KeyCode::Char(c) if matches!(cs.focus, CaptchaFocus::Input) => {
                 let mut input = cs.input;
@@ -347,12 +342,7 @@ impl App {
                     return;
                 }
             }
-            // Enter on OpenBrowser: open captcha in browser
-            KeyCode::Enter if matches!(cs.focus, CaptchaFocus::OpenBrowser) => {
-                let _ = webbrowser::open(&cs.captcha_url);
-                cs
-            }
-            // Enter on non-Submit/OpenBrowser: do nothing
+            // Enter on non-Submit: do nothing
             KeyCode::Enter => cs,
             _ => cs,
         };

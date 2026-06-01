@@ -65,7 +65,6 @@ pub enum CaptchaFocus {
     Categories,
     Input,
     Submit,
-    OpenBrowser,
 }
 
 #[derive(Debug, Clone)]

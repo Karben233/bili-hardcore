@@ -83,6 +83,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 Constraint::Min(6),
                 Constraint::Length(1),
                 Constraint::Length(1),
+                Constraint::Length(1),
             ])
             .split(inner);
 
@@ -109,10 +110,16 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 chunks[2],
             );
             f.render_widget(
-                Paragraph::new("B 浏览器打开二维码  Ctrl+R 刷新  ESC 返回")
-                    .style(Style::default().fg(Color::DarkGray))
+                Paragraph::new("💡二维码扫不出？按 Ctrl+B 在浏览器中打开")
+                    .style(Style::default().fg(Color::Green))
                     .alignment(Alignment::Center),
                 chunks[3],
+            );
+            f.render_widget(
+                Paragraph::new("Ctrl+B 浏览器打开二维码  Ctrl+R 刷新  ESC 返回")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .alignment(Alignment::Center),
+                chunks[4],
             );
         }
 
@@ -516,6 +523,7 @@ fn draw_captcha(
         Constraint::Min(3),
         Constraint::Length(2),
         Constraint::Length(1),
+        Constraint::Length(1),
     ])
     .split(area);
 
@@ -548,39 +556,14 @@ fn draw_captcha(
 
     match (picker, img) {
         (Some(p), Some(dyn_img)) => {
-            // Two-part layout in image area: image on top (Min), URL text below (Length 2)
-            let img_layout = Layout::vertical([
-                Constraint::Min(1),
-                Constraint::Length(2),
-            ])
-            .split(chunks[2]);
-
-            // Try rendering the image; if it fails, just skip (URL is shown below anyway)
-            if let Ok(protocol) = p.new_protocol(dyn_img.clone(), img_layout[0], ratatui_image::Resize::Fit(None)) {
-                f.render_widget(ratatui_image::Image::new(&protocol), img_layout[0]);
+            if let Ok(protocol) = p.new_protocol(dyn_img.clone(), chunks[2], ratatui_image::Resize::Fit(None)) {
+                f.render_widget(ratatui_image::Image::new(&protocol), chunks[2]);
             }
-
-            let browser_style = if matches!(cs.focus, CaptchaFocus::OpenBrowser) {
-                selected_style(Color::Cyan)
-            } else {
-                dim_style(Color::DarkGray)
-            };
-            f.render_widget(
-                Paragraph::new("[ 使用浏览器打开验证码 ]")
-                    .style(browser_style)
-                    .alignment(Alignment::Center),
-                img_layout[1],
-            );
         }
         _ => {
-            let browser_style = if matches!(cs.focus, CaptchaFocus::OpenBrowser) {
-                selected_style(Color::Cyan)
-            } else {
-                dim_style(Color::DarkGray)
-            };
             f.render_widget(
-                Paragraph::new("[ 使用浏览器打开验证码 ]")
-                    .style(browser_style)
+                Paragraph::new("验证码加载中...")
+                    .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center),
                 chunks[2],
             );
@@ -624,10 +607,16 @@ fn draw_captcha(
     }
 
     f.render_widget(
-        Paragraph::new("↑↓ 选择分类  空格 勾选  Ctrl+R 刷新  ESC 取消")
-            .style(Style::default().fg(Color::DarkGray))
+        Paragraph::new("💡验证码没有显示？按Ctrl+B通过浏览器打开")
+            .style(Style::default().fg(Color::Green))
             .alignment(Alignment::Center),
         chunks[5],
+    );
+    f.render_widget(
+        Paragraph::new("↑↓ 选择  空格 勾选  Ctrl+B 浏览器打开验证码  Ctrl+R 刷新  ESC 取消")
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center),
+        chunks[6],
     );
 }
 
