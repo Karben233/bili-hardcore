@@ -231,19 +231,36 @@ jobs:
           echo "=== Release assets ==="
           ls -lh release-assets/
 
+      - name: Read release notes
+        id: release-notes
+        shell: bash
+        run: |
+          NOTES_FILE="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            {
+              echo "content<<EOF"
+              cat "$NOTES_FILE"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "content=无具体更新说明。" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Bili Hardcore ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           draft: false
           prerelease: false
           body: |
-            ## Bili Hardcore ${{ github.ref_name }}
+            # Bili Hardcore ${{ github.ref_name }}
 
-            B站硬核会员自动答题工具
+            ## 📢 更新日志 / Changelog
 
-            ### 📦 下载 / Downloads
+            ${{ steps.release-notes.outputs.content }}
+
+            ## 📦 下载 / Downloads
 
             | 平台 Platform | 文件 File |
             |---------------|-----------|
@@ -256,7 +273,7 @@ jobs:
             | **Linux** (ARM64 musl) | [linux-arm64-musl.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-arm64-musl.tar.gz) |
             | **Linux** (ARM64 glibc) | [linux-arm64.tar.gz](https://github.com/Karben233/bili-hardcore/releases/download/${{ github.ref_name }}/bili-hardcore-${{ github.ref_name }}-linux-arm64.tar.gz) |
 
-            ### 🚀 快速安装 / Quick Install
+            ## 🚀 快速安装 / Quick Install
 
             **macOS / Linux (one-liner):**
             ```bash
@@ -268,7 +285,7 @@ jobs:
             irm https://github.com/Karben233/bili-hardcore/releases/latest/download/install.ps1 | iex
             ```
 
-            ### 💡 提示
+            ## 💡 提示
 
             - **Linux 用户建议优先使用 `-musl` 版本**（静态链接，无系统库依赖，兼容所有发行版）
             - **macOS 提示**: 如遇 "无法验证开发者"，执行：`xattr -cr ~/.local/bin/bili-hardcore`

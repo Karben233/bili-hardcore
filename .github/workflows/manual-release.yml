@@ -183,19 +183,38 @@ jobs:
           echo "=== Release assets ==="
           ls -lh release-assets/
 
+      - name: Read release notes
+        id: release-notes
+        shell: bash
+        run: |
+          NOTES_FILE="docs/release-notes/${VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            {
+              echo "content<<EOF"
+              cat "$NOTES_FILE"
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "content=无具体更新说明。" >> $GITHUB_OUTPUT
+          fi
+        env:
+          VERSION: ${{ inputs.tag }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          name: Bili Hardcore ${{ inputs.tag }}
+          name: ${{ inputs.tag }}
           draft: false
           prerelease: false
           body: |
-            ## Bili Hardcore ${{ inputs.tag }}
+            # Bili Hardcore ${{ inputs.tag }}
 
-            B站硬核会员自动答题工具
+            ## 📢 更新日志 / Changelog
 
-            ### 📦 下载 / Downloads
+            ${{ steps.release-notes.outputs.content }}
+
+            ## 📦 下载 / Downloads
 
             | 平台 Platform | 文件 File |
             |---------------|-----------|
