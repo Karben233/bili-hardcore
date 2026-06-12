@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "重试/退避/错误终止需遵循项目错误处理规范（AppError、错误码、处理策略）"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "重试与退避需用 tracing 记录，遵循日志级别与格式规范"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "统一 MAX_LLM_RETRIES 常量 + 重试路径汇聚，避免重复；改常量前先全局搜索"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "实现需满足代码质量标准（clippy/build 通过、禁用模式）"}

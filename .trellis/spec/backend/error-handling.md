@@ -47,38 +47,48 @@ if code != 0 {
 }
 ```
 
-### Pattern 2: Exponential backoff retry (spawned tasks)
+### Pattern 2: Event-driven retry with exponential backoff (LLM)
 
-LLM requests and other flaky operations retry with exponential backoff inside a `tokio::spawn` block. The retry logic lives in the spawned task, not the `ask()` method itself.
+LLM requests retry on failure — empty content, request error, or unparseable reply. Retry is **event-driven** (not an in-task `for` loop) so the TUI can render a visible retry state and the backoff timer runs without blocking the event loop.
 
-**Retry parameters**: max 3 attempts, base delay 500ms, doubles each attempt (500ms → 1s → 2s).
+**Retry parameters**: `App::MAX_LLM_RETRIES = 3` retries (excluding the first request); backoff `secs = 2u64 << (attempt-1)` → 2s / 4s / 8s.
+
+**Flow**:
+1. Every failure path sends `AppEvent::LlmRetry { reason }` — it does **not** decide the retry limit. Sources: empty `LlmChunk::Done`, `LlmChunk::Error`, and an unparseable `Done` reply.
+2. The `LlmRetry` handler computes `attempt = llm_retries + 1`:
+   - `attempt > MAX_LLM_RETRIES` → give up, set `QuizPhase::Error("AI 回答错误: {reason}（已重试 N 次）")`.
+   - otherwise → clear streaming text, compute `secs = 2u64 << (attempt-1)` and `deadline = Instant::now() + secs`, set `QuizPhase::WaitingRetry { attempt, deadline }`, and `tokio::spawn` a `sleep(secs)` task that sends `AppEvent::LlmRetryFire`.
+3. `LlmRetryFire` re-checks the phase is still `WaitingRetry` (via `matches!`) before `spawn_llm()`; a stale fire (user navigated away / new question arrived) is ignored.
+4. `llm_retries` resets to 0 on each `QuestionReady`.
 
 ```rust
-// src/app.rs — spawn_llm()
-tokio::spawn(async move {
-    let max_retries = 3u32;
-    let mut last_err = String::new();
-    for attempt in 0..max_retries {
-        match client.ask(&prompt).await {
-            Ok(ans) => {
-                let _ = tx.send(AppEvent::LlmOk(ans));
-                return;
-            }
-            Err(e) => {
-                last_err = e.to_string();
-                tracing::warn!("LLM 请求失败 (第{}次): {}", attempt + 1, last_err);
-                if attempt + 1 < max_retries {
-                    let delay = std::time::Duration::from_millis(500 * 2u64.pow(attempt));
-                    tokio::time::sleep(delay).await;
-                }
-            }
-        }
+// src/app.rs — LlmRetry handler (main event loop)
+AppEvent::LlmRetry { reason } => {
+    let attempt = self.llm_retries + 1;
+    if attempt > Self::MAX_LLM_RETRIES {
+        self.phase = QuizPhase::Error(format!(
+            "AI 回答错误: {}（已重试 {} 次）", reason, Self::MAX_LLM_RETRIES));
+    } else {
+        self.llm_retries = attempt;
+        let secs = 2u64 << (attempt - 1); // 2 / 4 / 8
+        self.thinking_text.clear();
+        self.answer_text.clear();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
+        self.phase = QuizPhase::WaitingRetry { attempt, deadline };
+        let tx = self.tx.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+            let _ = tx.send(AppEvent::LlmRetryFire);
+        });
     }
-    let _ = tx.send(AppEvent::LlmErr(last_err));
-});
+}
 ```
 
-**Why retry in spawn, not in `ask()`**: The spawned task owns the `tx` channel sender and can report errors. Retrying inside `ask()` would require the caller to re-invoke, complicating the event loop.
+**Why event-driven, not an in-task loop**: the backoff `sleep` must not block the TUI event loop, and the user must see the retry state. Centralizing the limit decision in the `LlmRetry` handler also means all failure paths converge regardless of origin.
+
+**Countdown rendering**: `WaitingRetry` stores `deadline: Instant` (not a fixed second count). The status line renders `↻ 第 N/3 次重试，{remaining}s 后重试...` where `remaining = deadline.saturating_duration_since(Instant::now()).as_secs()`, recomputed every frame; the TUI's 100ms redraw tick drives the countdown, so no extra timer or tick counter is needed.
+
+**Stale-fire guard**: background timers are not cancelled on navigation (see Pattern 3). The `matches!(self.phase, QuizPhase::WaitingRetry { .. })` check on `LlmRetryFire` prevents a late fire from launching a stray request after the user left or a new question arrived.
 
 ### Pattern 3: Background task lifecycle (fire-and-forget via channel)
 

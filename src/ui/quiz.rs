@@ -167,7 +167,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
         }
 
-        QuizPhase::WaitingLlm | QuizPhase::Submitting | QuizPhase::ShowingResult { .. } => {
+        QuizPhase::WaitingLlm | QuizPhase::WaitingRetry { .. } | QuizPhase::Submitting | QuizPhase::ShowingResult { .. } => {
             let num = app.question_num;
             let accuracy = if num > 0 {
                 (app.score as f64 / num as f64 * 100.0) as u32
@@ -290,6 +290,20 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                     lines.push(Line::from(Span::styled(
                         format!("{} AI 思考中...", app.spin_char()),
                         Style::default().fg(Color::Cyan),
+                    )));
+                }
+                QuizPhase::WaitingRetry { attempt, deadline } => {
+                    let remaining = deadline
+                        .saturating_duration_since(std::time::Instant::now())
+                        .as_secs();
+                    lines.push(Line::from(Span::styled(
+                        format!(
+                            "↻ 第 {}/{} 次重试，{}s 后重试...",
+                            attempt,
+                            App::MAX_LLM_RETRIES,
+                            remaining
+                        ),
+                        Style::default().fg(Color::Yellow),
                     )));
                 }
                 QuizPhase::Submitting => {
