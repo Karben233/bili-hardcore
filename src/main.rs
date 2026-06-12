@@ -45,6 +45,18 @@ enum Commands {
     Update,
     /// 卸载 bili-hardcore
     Uninstall,
+    /// 导出历史题库
+    Export {
+        /// 导出格式 (json 或 text)
+        #[arg(short = 'f', long, default_value = "json")]
+        format: String,
+        /// 输出文件路径 (默认输出到终端)
+        #[arg(short = 'o', long)]
+        output: Option<String>,
+        /// 仅导出答对的题目
+        #[arg(short = 'c', long)]
+        correct_only: bool,
+    },
 }
 
 #[cfg(debug_assertions)]
@@ -76,6 +88,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match cmd {
             Commands::Update => return run_update().await,
             Commands::Uninstall => return uninstall(),
+            Commands::Export { format, output, correct_only } => {
+                return run_export(format, output.as_deref(), *correct_only);
+            }
         }
     }
 
@@ -197,6 +212,70 @@ fn uninstall() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("卸载完成");
+    Ok(())
+}
+
+fn run_export(
+    format: &str,
+    output: Option<&str>,
+    correct_only: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let history = config::load_history();
+    if history.is_empty() {
+        eprintln!("没有找到答题记录");
+        std::process::exit(1);
+    }
+
+    let filtered: Vec<_> = if correct_only {
+        history.into_iter().filter(|h| h.correct).collect()
+    } else {
+        history
+    };
+
+    if filtered.is_empty() {
+        eprintln!("没有符合条件的答题记录");
+        std::process::exit(1);
+    }
+
+    let content = match format {
+        "json" => serde_json::to_string_pretty(&filtered)?,
+        "text" => {
+            let mut lines = Vec::new();
+            for item in &filtered {
+                let mark = if item.correct { "✓" } else { "✗" };
+                lines.push(format!("[第{}题] {}", item.num, mark));
+                lines.push(format!("题目: {}", item.question));
+                lines.push("选项:".to_string());
+                for (i, opt) in item.options.iter().enumerate() {
+                    let idx = i + 1;
+                    let chosen = if idx == item.chosen_idx { " ← (作答)" } else { "" };
+                    lines.push(format!("  {}. {}{}", idx, opt, chosen));
+                }
+                if let Some(correct_idx) = item.correct_idx {
+                    if !item.correct {
+                        lines.push(format!("正确答案: {}", correct_idx));
+                    }
+                }
+                lines.push(String::new());
+            }
+            lines.join("\n")
+        }
+        _ => {
+            eprintln!("不支持的格式: {} (可选: json, text)", format);
+            std::process::exit(1);
+        }
+    };
+
+    match output {
+        Some(path) => {
+            std::fs::write(path, &content)?;
+            println!("已导出 {} 条记录到 {}", filtered.len(), path);
+        }
+        None => {
+            println!("{}", content);
+        }
+    }
+
     Ok(())
 }
 
