@@ -2,6 +2,8 @@ use crate::app::*;
 use crate::config::{self, OpenAiConfig};
 use crossterm::event::{KeyCode, KeyModifiers};
 
+const PRESET_COUNT: usize = 4; // must match presets.json length
+
 use crate::app::CaptchaFocus;
 
 impl App {
@@ -39,6 +41,33 @@ impl App {
     }
 
     fn key_config(&mut self, code: KeyCode) {
+        // Handle preset selection overlay when active
+        if self.cfg_preset_open {
+            match code {
+                KeyCode::Up => {
+                    self.cfg_preset_sel = self.cfg_preset_sel.saturating_sub(1);
+                }
+                KeyCode::Down => {
+                    self.cfg_preset_sel = (self.cfg_preset_sel + 1).min(PRESET_COUNT - 1);
+                }
+                KeyCode::Enter => {
+                    let presets = config::load_presets();
+                    if let Some(preset) = presets.get(self.cfg_preset_sel) {
+                        self.cfg_fields[0] = preset.config.base_url.clone();
+                        self.cfg_fields[1] = preset.config.model.clone();
+                        self.cfg_cursors[0] = self.cfg_fields[0].len();
+                        self.cfg_cursors[1] = self.cfg_fields[1].len();
+                    }
+                    self.cfg_preset_open = false;
+                }
+                KeyCode::Esc => {
+                    self.cfg_preset_open = false;
+                }
+                _ => {}
+            }
+            return;
+        }
+
         // Handle confirmation dialog when active
         if self.config_confirm_reset {
             match code {
@@ -67,7 +96,11 @@ impl App {
             ConfigFocus::BaseUrl => Some(0),
             ConfigFocus::Model => Some(1),
             ConfigFocus::ApiKey => Some(2),
-            ConfigFocus::ThinkingToggle | ConfigFocus::FastModeToggle | ConfigFocus::SaveBtn | ConfigFocus::ResetBtn => None,
+            ConfigFocus::ThinkingToggle
+            | ConfigFocus::FastModeToggle
+            | ConfigFocus::SaveBtn
+            | ConfigFocus::TemplateBtn
+            | ConfigFocus::ResetBtn => None,
         };
 
         match code {
@@ -80,6 +113,10 @@ impl App {
                 }
                 ConfigFocus::ThinkingToggle => self.cfg_thinking = !self.cfg_thinking,
                 ConfigFocus::FastModeToggle => self.cfg_fast_mode = !self.cfg_fast_mode,
+                ConfigFocus::TemplateBtn => {
+                    self.cfg_preset_open = true;
+                    self.cfg_preset_sel = 0;
+                }
                 _ => {}
             },
             KeyCode::Backspace => {
@@ -112,7 +149,8 @@ impl App {
                     ConfigFocus::ApiKey => ConfigFocus::ThinkingToggle,
                     ConfigFocus::ThinkingToggle => ConfigFocus::FastModeToggle,
                     ConfigFocus::FastModeToggle => ConfigFocus::SaveBtn,
-                    ConfigFocus::SaveBtn => ConfigFocus::ResetBtn,
+                    ConfigFocus::SaveBtn => ConfigFocus::TemplateBtn,
+                    ConfigFocus::TemplateBtn => ConfigFocus::ResetBtn,
                     ConfigFocus::ResetBtn => ConfigFocus::BaseUrl,
                 };
             }
@@ -124,7 +162,8 @@ impl App {
                     ConfigFocus::FastModeToggle => ConfigFocus::ThinkingToggle,
                     ConfigFocus::ThinkingToggle => ConfigFocus::ApiKey,
                     ConfigFocus::SaveBtn => ConfigFocus::FastModeToggle,
-                    ConfigFocus::ResetBtn => ConfigFocus::SaveBtn,
+                    ConfigFocus::TemplateBtn => ConfigFocus::SaveBtn,
+                    ConfigFocus::ResetBtn => ConfigFocus::TemplateBtn,
                 };
             }
             KeyCode::Char(' ')
@@ -353,6 +392,7 @@ impl App {
     // --- Navigation actions ---
 
     fn enter_config(&mut self) {
+        let is_first_time = self.config.is_none();
         if let Some(ref c) = self.config {
             self.cfg_fields = [c.base_url.clone(), c.model.clone(), c.api_key.clone()];
         }
@@ -362,6 +402,11 @@ impl App {
             self.cfg_fields[2].len(),
         ];
         self.cfg_focus = ConfigFocus::BaseUrl;
+        // Auto-open preset selection for first-time users (no existing config)
+        if is_first_time {
+            self.cfg_preset_open = true;
+            self.cfg_preset_sel = 0;
+        }
         self.go(Page::Config);
     }
 

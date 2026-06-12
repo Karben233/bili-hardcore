@@ -44,10 +44,29 @@ This is a ratatui + crossterm TUI app. Keyboard events flow through `input.rs` w
 
 | Key | Action |
 |-----|--------|
-| `↑` / `↓` | Cycle through fields (BaseUrl → Model → ApiKey → SaveBtn → ResetBtn → wraps) |
+| `↑` / `↓` | Cycle through: BaseUrl → Model → ApiKey → ThinkingToggle → FastModeToggle → SaveBtn → TemplateBtn → ResetBtn → wraps |
 | `←` / `→` | Move cursor within text field |
 | `Backspace` | Delete character before cursor |
+| `Space` | Toggle Thinking / Fast mode |
 | `Char(c)` | Insert character at cursor position |
+
+### Preset Template Selection Overlay
+
+Opened automatically when entering config page with no existing config, or manually via TemplateBtn.
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Cycle through preset templates |
+| `Enter` | Apply selected preset (fills base_url + model only, preserves other fields) |
+| `Esc` | Close overlay without applying |
+
+### Reset Confirm Overlay
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Cycle: 取消 → 仅退出登录 → 确认重置 |
+| `Enter` | Execute selected option |
+| `Esc` | Close overlay (same as 取消) |
 
 ### Quiz Page
 
@@ -122,3 +141,33 @@ fn key_captcha(&mut self, key: KeyEvent) {
 - Forgetting to check `key.modifiers` for Ctrl+R — must match `KeyCode::Char('r')` AND `KeyModifiers::CONTROL`
 - Using `key.code` when modifiers are needed — `key_quiz` receives the full `KeyEvent`, not just `KeyCode`
 - Not wrapping focus at boundaries — captcha focus cycles (Submit → Categories), config fields wrap (ResetBtn → BaseUrl)
+
+---
+
+## UI Style Conventions
+
+### Button Style
+
+All selectable buttons and list items across all pages (config page, preset overlay, reset confirm) use a **consistent bracket style**:
+
+| State | Format | Example |
+|-------|--------|---------|
+| **Focused/Selected** | `[ {label} ]` | `[ 保存 ]`, `[ 硅基流动 ]` |
+| **Unfocused** | `  {label}  ` | `  保存  `, `  硅基流动  ` |
+
+**How to apply**: When rendering any button or selectable option, use the conditional pattern:
+```rust
+let text = if is_focused { format!("[ {} ]", label) } else { format!("  {}  ", label) };
+```
+
+### Key Hint Placement
+
+Keyboard shortcut hints (e.g. `"↑↓ 切换  Space 勾选  Enter 确认  ESC 返回"`) **must always be at the absolute bottom of the page**, never floating in the middle.
+
+**How to apply**: Use a two-part `Layout::vertical` split — `Min(1)` for content area + `Length(2)` for hints — so hints are pinned to the bottom:
+```rust
+let outer = Layout::vertical([
+    Constraint::Min(1),      // content area (flexible)
+    Constraint::Length(2),   // key hints (pinned to bottom)
+]).split(area);
+```

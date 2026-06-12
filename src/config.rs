@@ -5,6 +5,27 @@ use std::path::PathBuf;
 
 const CONFIG_DIR_NAME: &str = ".bili-hardcore";
 
+// --- Preset Templates ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PresetConfig {
+    pub base_url: String,
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PresetTemplate {
+    pub provider: String,
+    pub provider_name: String,
+    pub config: PresetConfig,
+}
+
+const PRESETS_JSON: &str = include_str!("presets.json");
+
+pub fn load_presets() -> Vec<PresetTemplate> {
+    serde_json::from_str(PRESETS_JSON).unwrap_or_default()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAiConfig {
     pub base_url: String,

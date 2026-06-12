@@ -28,6 +28,7 @@ pub enum ConfigFocus {
     ThinkingToggle,
     FastModeToggle,
     SaveBtn,
+    TemplateBtn,
     ResetBtn,
 }
 
@@ -176,6 +177,8 @@ pub struct App {
     pub cfg_fast_mode: bool,
     pub config_confirm_reset: bool,
     pub config_reset_choice: u8,
+    pub cfg_preset_open: bool,
+    pub cfg_preset_sel: usize,
 
     // Quiz state
     pub phase: QuizPhase,
@@ -267,10 +270,12 @@ impl App {
             ],
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
-            cfg_thinking: config.as_ref().is_some_and(|c| c.enable_thinking),
+            cfg_thinking: config.as_ref().map_or(true, |c| c.enable_thinking),
             cfg_fast_mode: config.as_ref().is_some_and(|c| c.enable_fast_mode),
             config_confirm_reset: false,
             config_reset_choice: 0,
+            cfg_preset_open: false,
+            cfg_preset_sel: 0,
             phase: QuizPhase::NotConfigured,
             score: 0,
             question_id: 0,
@@ -317,9 +322,11 @@ impl App {
         self.bili = BiliClient::new();
         self.cfg_fields = [String::new(), String::new(), String::new()];
         self.cfg_cursors = [0, 0, 0];
-        self.cfg_thinking = false;
+        self.cfg_thinking = true;
         self.config_confirm_reset = false;
         self.config_reset_choice = 0;
+        self.cfg_preset_open = false;
+        self.cfg_preset_sel = 0;
         self.back();
     }
 

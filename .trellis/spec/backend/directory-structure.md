@@ -17,7 +17,8 @@ src/
 ├── main.rs                # Entry point: CLI args, TUI setup, event loop
 ├── app.rs                 # App state machine, quiz flow orchestration
 ├── error.rs               # AppError enum (thiserror derive)
-├── config.rs              # Config load/save (JSON), prompt template, CLI overrides
+├── config.rs              # Config load/save (JSON), prompt template, preset loader, CLI overrides
+├── presets.json            # LLM provider preset templates (compile-time include_str!)
 ├── input.rs               # Keyboard event handling
 ├── crypto.rs              # B站 API signing (MD5 appsign, HMAC-SHA256 ticket)
 ├── api/
