@@ -121,6 +121,7 @@ pub enum AppEvent {
     },
     LlmChunk(LlmChunk),
     LlmErr(String),
+    LlmRetry,
     SubmitOk {
         score: i64,
     },
@@ -145,6 +146,8 @@ pub struct HistoryItem {
     pub options: Vec<String>,
     pub chosen_idx: usize,
     pub correct: bool,
+    #[serde(default)]
+    pub correct_idx: Option<usize>,
 }
 
 // --- Main App State ---
@@ -203,6 +206,9 @@ pub struct App {
 
     // Selected category names for LLM prompt
     pub selected_categories: Vec<String>,
+
+    // LLM retry counter
+    pub llm_retries: u32,
 }
 
 impl App {
@@ -279,6 +285,7 @@ impl App {
             captcha_image: None,
             captcha_preserve: None,
             selected_categories: config::load_categories(),
+            llm_retries: 0,
         }
     }
 
@@ -339,6 +346,7 @@ impl App {
                     options: self.answers.iter().map(|a| a.text.clone()).collect(),
                     chosen_idx: self.chosen_answer_idx,
                     correct,
+                    correct_idx: None,
                 });
                 let _ = config::save_history(&self.history);
                 if num < 100 {
@@ -580,6 +588,8 @@ impl App {
             );
             let (llm_tx, mut llm_rx) = mpsc::unbounded_channel::<LlmChunk>();
             let tx = self.tx.clone();
+            let current_retries = self.llm_retries;
+            let max_retries = 3u32;
 
             let full_prompt = crate::config::build_quiz_prompt(
                 &self.selected_categories,
@@ -591,8 +601,7 @@ impl App {
             client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx);
 
             tokio::spawn(async move {
-                let mut retries = 0u32;
-                let max_retries = 3u32;
+                #[allow(unused_assignments)]
                 let mut last_err = String::new();
 
                 while let Some(chunk) = llm_rx.recv().await {
@@ -602,17 +611,17 @@ impl App {
                         }
                         LlmChunk::Done(text) => {
                             if text.is_empty() {
-                                retries += 1;
-                                if retries >= max_retries {
-                                    let _ = tx.send(AppEvent::LlmErr(last_err.clone()));
+                                if current_retries + 1 >= max_retries {
+                                    tracing::warn!("LLM 返回空内容，已达到最大重试次数");
+                                    let _ = tx.send(AppEvent::LlmErr("LLM 返回空内容".into()));
                                     return;
                                 }
-                                tracing::warn!("LLM 返回空内容 (第{}次)", retries);
-                                let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Error(
-                                    format!("LLM 返回空内容，正在重试 ({}/{})...", retries, max_retries),
-                                )));
-                                // Re-initiate is not possible here, just report error
-                                let _ = tx.send(AppEvent::LlmErr("LLM 返回空内容".into()));
+                                tracing::warn!(
+                                    "LLM 返回空内容，将重试 ({}/{})",
+                                    current_retries + 1,
+                                    max_retries
+                                );
+                                let _ = tx.send(AppEvent::LlmRetry);
                                 return;
                             }
                             let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Done(text)));
@@ -620,7 +629,17 @@ impl App {
                         }
                         LlmChunk::Error(msg) => {
                             last_err = msg;
-                            let _ = tx.send(AppEvent::LlmErr(last_err));
+                            if current_retries + 1 >= max_retries {
+                                let _ = tx.send(AppEvent::LlmErr(last_err));
+                                return;
+                            }
+                            tracing::warn!(
+                                "LLM 请求失败，将重试 ({}/{}): {}",
+                                current_retries + 1,
+                                max_retries,
+                                last_err
+                            );
+                            let _ = tx.send(AppEvent::LlmRetry);
                             return;
                         }
                     }
@@ -759,6 +778,7 @@ impl App {
                 | AppEvent::CaptchaData { .. }
                 | AppEvent::LlmChunk(_)
                 | AppEvent::LlmErr(_)
+                | AppEvent::LlmRetry
                 | AppEvent::SubmitOk { .. }
                 | AppEvent::SubmitFail(_)
                 | AppEvent::QuizDone { .. }
@@ -807,6 +827,7 @@ impl App {
                 self.question_id = id;
                 self.thinking_text.clear();
                 self.answer_text.clear();
+                self.llm_retries = 0;
                 self.spawn_llm();
                 self.phase = QuizPhase::WaitingLlm;
             }
@@ -863,10 +884,21 @@ impl App {
                         }
                         None => {
                             tracing::warn!("AI 回复无法解析: {}", full_text);
-                            self.thinking_text.clear();
-                            self.answer_text.clear();
-                            self.phase = QuizPhase::FetchingQuestion;
-                            self.spawn_fetch_question();
+                            if self.llm_retries + 1 < 3 {
+                                self.llm_retries += 1;
+                                tracing::warn!(
+                                    "将重试 LLM ({}/3)",
+                                    self.llm_retries
+                                );
+                                self.thinking_text.clear();
+                                self.answer_text.clear();
+                                self.spawn_llm();
+                            } else {
+                                self.phase = QuizPhase::Error(format!(
+                                    "AI 回复无法解析: {}",
+                                    full_text
+                                ));
+                            }
                         }
                     }
                 }
@@ -876,6 +908,12 @@ impl App {
             },
             AppEvent::LlmErr(msg) => {
                 self.phase = QuizPhase::Error(format!("AI 回答错误: {}", msg));
+            }
+            AppEvent::LlmRetry => {
+                self.llm_retries += 1;
+                self.thinking_text.clear();
+                self.answer_text.clear();
+                self.spawn_llm();
             }
             AppEvent::SubmitOk { score } => {
                 let correct = score > self.score;
