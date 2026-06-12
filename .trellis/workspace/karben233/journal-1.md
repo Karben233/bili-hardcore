@@ -536,3 +536,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: 增加LLM配置预设模板功能
+
+**Date**: 2026-06-12
+**Task**: 增加LLM配置预设模板功能
+**Branch**: `main`
+
+### Summary
+
+新增预设模板选择功能：presets.json 编译期嵌入、首次进入自动弹出模板浮层、配置页模板按钮、统一按钮样式、思考模式默认勾选、按键提示固定底部、spec 更新
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9749e30` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
