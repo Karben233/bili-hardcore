@@ -3,7 +3,7 @@
         "provider": "siliconflow",
         "provider_name": "硅基流动",
         "config": {
-            "base_url": "https://api.siliconflow.com/v1/chat/completions",
+            "base_url": "https://api.siliconflow.cn/v1/chat/completions",
             "model": "deepseek-ai/DeepSeek-V4-Flash"
         }
     },
@@ -11,7 +11,7 @@
         "provider": "deepseek",
         "provider_name": "DeepSeek",
         "config": {
-            "base_url": "https://api.deepseek.com",
+            "base_url": "https://api.deepseek.com/v1/chat/completions",
             "model": "deepseek-v4-flash"
         }
     },
@@ -19,7 +19,7 @@
         "provider": "zai",
         "provider_name": "智谱",
         "config": {
-            "base_url": "https://open.bigmodel.cn/api/paas/v4",
+            "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
             "model": "glm-4.7"
         }
     },
