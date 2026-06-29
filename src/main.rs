@@ -246,10 +246,10 @@ async fn fetch_latest_tag_via_redirect(
     }
 
     // 尝试从 Location header 获取（当不跟随 redirect 时）
-    if let Some(location) = resp.headers().get("location").and_then(|v| v.to_str().ok()) {
-        if let Some(tag) = location.rsplit('/').next().filter(|s| s.starts_with('v')) {
-            return Ok(tag.to_string());
-        }
+    if let Some(location) = resp.headers().get("location").and_then(|v| v.to_str().ok())
+        && let Some(tag) = location.rsplit('/').next().filter(|s| s.starts_with('v'))
+    {
+        return Ok(tag.to_string());
     }
 
     Err("无法从 GitHub releases 页面获取最新版本号".into())

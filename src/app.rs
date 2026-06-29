@@ -270,7 +270,7 @@ impl App {
             ],
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
-            cfg_thinking: config.as_ref().map_or(true, |c| c.enable_thinking),
+            cfg_thinking: config.as_ref().is_none_or(|c| c.enable_thinking),
             cfg_fast_mode: config.as_ref().is_some_and(|c| c.enable_fast_mode),
             config_confirm_reset: false,
             config_reset_choice: 0,
