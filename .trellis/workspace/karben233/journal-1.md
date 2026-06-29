@@ -602,3 +602,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: 修复重新进入答题界面得分为0
+
+**Date**: 2026-06-29
+**Task**: 修复重新进入答题界面得分为0
+**Branch**: `main`
+
+### Summary
+
+LevelOk 重新进入答题时硬编码 score=0，导致得分/正确率显示为0。改为从历史记录派生：history 中 correct==true 的计数恒等于服务器累计答对数，空历史则为0。仅改 src/app.rs 一处，旧 history.json 无需迁移即生效，question_num 仍由服务器返回、正确率分母随之正确。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7242402` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
