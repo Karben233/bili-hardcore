@@ -802,7 +802,10 @@ impl App {
             }
             AppEvent::LoginPending => {}
             AppEvent::LevelOk => {
-                self.score = 0;
+                // 从历史记录恢复累计得分：历史中 correct==true 的计数恒等于
+                // 服务器返回的累计答对数（correct 由 score 派生，见 SubmitOk），
+                // 避免重新进入答题界面时得分/正确率被重置为 0。
+                self.score = self.history.iter().filter(|h| h.correct).count() as i64;
                 self.phase = QuizPhase::FetchingQuestion;
                 self.spawn_fetch_question();
             }
