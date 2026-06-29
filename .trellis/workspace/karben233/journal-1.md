@@ -569,3 +569,36 @@ Populated all 5 backend spec files (directory-structure, storage, error-handling
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: 修复答题正确率在新题加载时误降的问题
+
+**Date**: 2026-06-29
+**Task**: 修复答题正确率在新题加载时误降的问题
+**Branch**: `main`
+
+### Summary
+
+诊断并修复答题界面正确率突降 bug：正确率分母原先用「当前题号」question_num，而分子 score 仅在提交答案后更新，导致新题加载时 question_num 先涨、score 未跟上，正确率突降。改为以「已提交题数」为分母(ShowingResult 阶段=question_num，其余阶段=question_num-1)。仅改 src/ui/quiz.rs 一处，cargo check 通过，clippy 无新增问题(2 个 pre-existing error 在 app.rs/main.rs，与本任务无关)。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e23a279` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
