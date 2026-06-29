@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "质量检查基线"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "状态恢复健壮性参考"}
