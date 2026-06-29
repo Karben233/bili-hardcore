@@ -169,8 +169,17 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
         QuizPhase::WaitingLlm | QuizPhase::WaitingRetry { .. } | QuizPhase::Submitting | QuizPhase::ShowingResult { .. } => {
             let num = app.question_num;
-            let accuracy = if num > 0 {
-                (app.score as f64 / num as f64 * 100.0) as u32
+            // 正确率分母用「已提交答案的题数」而非「当前题号」：
+            // ShowingResult 阶段当前题已提交，其余阶段（WaitingLlm/WaitingRetry/Submitting）
+            // 当前题尚未提交。否则新题加载时 question_num 先涨、score 尚未跟上，
+            // 会出现「新题还没提交，正确率却突降」的现象。
+            let answered = if matches!(&app.phase, QuizPhase::ShowingResult { .. }) {
+                num
+            } else {
+                num.saturating_sub(1)
+            };
+            let accuracy = if answered > 0 {
+                (app.score as f64 / answered as f64 * 100.0) as u32
             } else {
                 0
             };
