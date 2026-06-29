@@ -1,0 +1,1 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "TUI 事件驱动架构与代码质量约定（禁用 unwrap/println、遵循 mpsc 模式），确保 accuracy 计算改动符合现有规范"}

@@ -1,0 +1,1 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "校验改动未引入 unwrap/println，遵循 mpsc 事件模式；确认 cargo check / clippy 通过"}
