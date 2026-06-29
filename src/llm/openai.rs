@@ -50,20 +50,16 @@ impl OpenAiClient {
         if self.enable_thinking {
             body["enable_thinking"] = serde_json::json!(true);
             body["thinking"] = serde_json::json!({ "type": "enabled" });
+            body["reasoning"] = serde_json::json!({ "effort": "medium" });
         } else {
             body["enable_thinking"] = serde_json::json!(false);
             body["thinking"] = serde_json::json!({ "type": "disabled" });
+            body["reasoning"] = serde_json::json!({ "effort": "none" });
         }
 
-        let url = if self.base_url.ends_with("/chat/completions") {
-            self.base_url.clone()
-        } else {
-            format!("{}/chat/completions", self.base_url)
-        };
-
+        let url = self.base_url.clone();
         let http = self.http.clone();
         let api_key = self.api_key.clone();
-        let base_url = self.base_url.clone();
 
         tokio::spawn(async move {
             let resp = match http
@@ -77,12 +73,7 @@ impl OpenAiClient {
             {
                 Ok(r) => r,
                 Err(e) => {
-                    let msg = if e.is_connect() && base_url.contains("dashscope.aliyuncs.com") {
-                        "使用阿里云百炼请关闭系统代理，否则可能会报错".to_string()
-                    } else {
-                        e.to_string()
-                    };
-                    let _ = tx.send(LlmChunk::Error(msg));
+                    let _ = tx.send(LlmChunk::Error(e.to_string()));
                     return;
                 }
             };
