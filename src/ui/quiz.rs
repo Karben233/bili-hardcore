@@ -551,9 +551,9 @@ fn draw_captcha(
     .split(area);
 
     f.render_widget(
-        Paragraph::new("需要验证码验证（空格键选择分类，最多3个）")
+        Paragraph::new("需要验证码验证（空格键选择分类，最多3个）\nCtrl+R 刷新验证码")
             .style(Style::default().fg(Color::Yellow))
-            .alignment(Alignment::Center),
+            .alignment(Alignment::Left),
         chunks[0],
     );
 
