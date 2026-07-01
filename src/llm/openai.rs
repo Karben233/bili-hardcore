@@ -51,14 +51,14 @@ impl OpenAiClient {
         let effort = if self.enable_thinking { "medium" } else { "none" };
 
         if is_openai {
-            // OpenAI 官方 API 仅识别 reasoning；enable_thinking / thinking 为非官方参数，不下发
-            body["reasoning"] = serde_json::json!({ "effort": effort });
+            // OpenAI 官方 API 仅识别 reasoning_effort；enable_thinking / thinking 为非官方参数，不下发
+            body["reasoning_effort"] = serde_json::json!(effort);
         } else {
             body["enable_thinking"] = serde_json::json!(self.enable_thinking);
             body["thinking"] = serde_json::json!({
                 "type": if self.enable_thinking { "enabled" } else { "disabled" }
             });
-            body["reasoning"] = serde_json::json!({ "effort": effort });
+            body["reasoning_effort"] = serde_json::json!(effort);
         }
 
         let url = self.base_url.clone();
