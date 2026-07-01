@@ -2,7 +2,7 @@ use crate::app::{App, ConfigFocus};
 use crate::config;
 use ratatui::style::{Color, Modifier, Style};
 
-const LABELS: [&str; 3] = ["API URL", "模型名称", "API Key"];
+const LABELS: [&str; 3] = ["API URL(Completions)", "模型名称", "API Key"];
 
 fn focus_index(focus: ConfigFocus) -> usize {
     match focus {
