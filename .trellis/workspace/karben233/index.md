@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
+- **Total Sessions**: 21
 - **Last Active**: 2026-07-03
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~670 | Active |
+| `journal-1.md` | ~703 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-07-03 | 全项目 rustfmt 格式化 | `4ff62f7` | `main` |
 | 20 | 2026-07-03 | 答题界面AI思考内容自动滚动 | `865e4bb` | `main` |
 | 19 | 2026-06-29 | 修复重新进入答题界面得分为0 | `7242402` | `main` |
 | 18 | 2026-06-29 | 修复答题正确率在新题加载时误降的问题 | `e23a279` | `main` |

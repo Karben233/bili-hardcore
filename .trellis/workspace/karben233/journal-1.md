@@ -668,3 +668,36 @@ LevelOk 重新进入答题时硬编码 score=0，导致得分/正确率显示为
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 全项目 rustfmt 格式化
+
+**Date**: 2026-07-03
+**Task**: 全项目 rustfmt 格式化
+**Branch**: `main`
+
+### Summary
+
+一次性 cargo fmt 清理 7 个文件共 40 处格式违规（无逻辑变更），建立干净基线使 cargo fmt --check 可作质量门。fmt/clippy/test 全绿。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4ff62f7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
