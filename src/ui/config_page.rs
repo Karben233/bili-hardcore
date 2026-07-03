@@ -175,7 +175,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     } else {
         dim_style(Color::DarkGray)
     };
-    let save_text = if save_focused { "[ 保存 ]" } else { "  保存  " };
+    let save_text = if save_focused {
+        "[ 保存 ]"
+    } else {
+        "  保存  "
+    };
     f.render_widget(
         Paragraph::new(save_text)
             .style(save_style)
@@ -209,7 +213,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     } else {
         dim_style(Color::DarkGray)
     };
-    let reset_text = if reset_focused { "[ 重置 ]" } else { "  重置  " };
+    let reset_text = if reset_focused {
+        "[ 重置 ]"
+    } else {
+        "  重置  "
+    };
     f.render_widget(
         Paragraph::new(reset_text)
             .style(reset_style)
@@ -225,11 +233,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     );
 }
 
-fn draw_preset_select(
-    f: &mut ratatui::Frame,
-    area: ratatui::layout::Rect,
-    sel: usize,
-) {
+fn draw_preset_select(f: &mut ratatui::Frame, area: ratatui::layout::Rect, sel: usize) {
     use ratatui::{
         layout::{Alignment, Constraint, Layout},
         style::{Color, Modifier, Style},
@@ -239,11 +243,7 @@ fn draw_preset_select(
     let presets = config::load_presets();
     let _count = presets.len();
 
-    let outer = Layout::vertical([
-        Constraint::Min(1),
-        Constraint::Length(1),
-    ])
-    .split(area);
+    let outer = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(area);
 
     // title + separator + presets (each 2 rows for breathing room)
     let preset_rows: Vec<Constraint> = std::iter::once(Constraint::Length(1)) // title
@@ -277,11 +277,7 @@ fn draw_preset_select(
     // Preset items
     for (i, preset) in presets.iter().enumerate() {
         let is_sel = i == sel;
-        let text_color = if is_sel {
-            Color::Yellow
-        } else {
-            Color::White
-        };
+        let text_color = if is_sel { Color::Yellow } else { Color::White };
         let style = if is_sel {
             Style::default().fg(text_color).add_modifier(Modifier::BOLD)
         } else {
@@ -310,22 +306,14 @@ fn draw_preset_select(
     );
 }
 
-fn draw_reset_confirm(
-    f: &mut ratatui::Frame,
-    area: ratatui::layout::Rect,
-    choice: u8,
-) {
+fn draw_reset_confirm(f: &mut ratatui::Frame, area: ratatui::layout::Rect, choice: u8) {
     use ratatui::{
         layout::{Alignment, Constraint, Layout},
         style::{Color, Modifier, Style},
         widgets::Paragraph,
     };
 
-    let outer = Layout::vertical([
-        Constraint::Min(1),
-        Constraint::Length(1),
-    ])
-    .split(area);
+    let outer = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(area);
 
     let chunks = Layout::vertical([
         Constraint::Percentage(30),
@@ -340,11 +328,7 @@ fn draw_reset_confirm(
 
     f.render_widget(
         Paragraph::new("确认重置")
-            .style(
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
             .alignment(Alignment::Center),
         chunks[1],
     );
@@ -357,13 +341,17 @@ fn draw_reset_confirm(
     );
 
     f.render_widget(
-        Paragraph::new(if choice == 0 { "[ 取消 ]" } else { "  取消  " })
-            .style(if choice == 0 {
-                selected_style(Color::Green)
-            } else {
-                dim_style(Color::DarkGray)
-            })
-            .alignment(Alignment::Center),
+        Paragraph::new(if choice == 0 {
+            "[ 取消 ]"
+        } else {
+            "  取消  "
+        })
+        .style(if choice == 0 {
+            selected_style(Color::Green)
+        } else {
+            dim_style(Color::DarkGray)
+        })
+        .alignment(Alignment::Center),
         chunks[3],
     );
 
@@ -383,13 +371,17 @@ fn draw_reset_confirm(
     );
 
     f.render_widget(
-        Paragraph::new(if choice == 2 { "[ 确认重置 ]" } else { "  确认重置  " })
-            .style(if choice == 2 {
-                selected_style(Color::Red)
-            } else {
-                dim_style(Color::DarkGray)
-            })
-            .alignment(Alignment::Center),
+        Paragraph::new(if choice == 2 {
+            "[ 确认重置 ]"
+        } else {
+            "  确认重置  "
+        })
+        .style(if choice == 2 {
+            selected_style(Color::Red)
+        } else {
+            dim_style(Color::DarkGray)
+        })
+        .alignment(Alignment::Center),
         chunks[5],
     );
 

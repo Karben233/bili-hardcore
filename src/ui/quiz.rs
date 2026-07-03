@@ -4,7 +4,10 @@ use ratatui::text::{Line, Span};
 use unicode_width::UnicodeWidthStr;
 
 fn strip_vendor_prefix(model: &str) -> &str {
-    model.rsplit_once('/').map(|(_, name)| name).unwrap_or(model)
+    model
+        .rsplit_once('/')
+        .map(|(_, name)| name)
+        .unwrap_or(model)
 }
 
 /// 计算纯文本在指定终端列宽下自动换行后占据的行数。
@@ -108,9 +111,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             center_text(f, inner, msg, Color::Cyan);
         }
 
-        QuizPhase::WaitingScan {
-            qr, countdown, ..
-        } => {
+        QuizPhase::WaitingScan { qr, countdown, .. } => {
             let chunks = Layout::vertical([
                 Constraint::Length(2),
                 Constraint::Min(6),
@@ -200,7 +201,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
         }
 
-        QuizPhase::WaitingLlm | QuizPhase::WaitingRetry { .. } | QuizPhase::Submitting | QuizPhase::ShowingResult { .. } => {
+        QuizPhase::WaitingLlm
+        | QuizPhase::WaitingRetry { .. }
+        | QuizPhase::Submitting
+        | QuizPhase::ShowingResult { .. } => {
             let num = app.question_num;
             // 正确率分母用「已提交答案的题数」而非「当前题号」：
             // ShowingResult 阶段当前题已提交，其余阶段（WaitingLlm/WaitingRetry/Submitting）
@@ -281,10 +285,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                             .add_modifier(Modifier::BOLD),
                     ),
                 ]);
-                f.render_widget(
-                    Paragraph::new(q_title).wrap(Wrap { trim: true }),
-                    left[0],
-                );
+                f.render_widget(Paragraph::new(q_title).wrap(Wrap { trim: true }), left[0]);
             }
 
             use ratatui::text::{Line, Span};
@@ -355,7 +356,11 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                     )));
                 }
                 QuizPhase::ShowingResult { correct, .. } => {
-                    let mark = if *correct { "✓ 回答正确" } else { "✗ 回答错误" };
+                    let mark = if *correct {
+                        "✓ 回答正确"
+                    } else {
+                        "✗ 回答错误"
+                    };
                     let mark_color = if *correct { Color::Green } else { Color::Red };
                     lines.push(Line::from(Span::styled(
                         mark.to_string(),
@@ -512,7 +517,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             } else {
                 Style::default().fg(Color::Red)
             };
-            let result_idx = lines.iter().position(|l| l.starts_with('✅') || l.starts_with('❌')).unwrap_or(0);
+            let result_idx = lines
+                .iter()
+                .position(|l| l.starts_with('✅') || l.starts_with('❌'))
+                .unwrap_or(0);
             let text: Vec<Line> = lines
                 .into_iter()
                 .enumerate()
@@ -612,14 +620,13 @@ fn draw_captcha(
     } else {
         Style::default().fg(Color::DarkGray)
     };
-    f.render_widget(
-        Paragraph::new(cat_text).style(cat_style),
-        chunks[1],
-    );
+    f.render_widget(Paragraph::new(cat_text).style(cat_style), chunks[1]);
 
     match (picker, img) {
         (Some(p), Some(dyn_img)) => {
-            if let Ok(protocol) = p.new_protocol(dyn_img.clone(), chunks[2], ratatui_image::Resize::Fit(None)) {
+            if let Ok(protocol) =
+                p.new_protocol(dyn_img.clone(), chunks[2], ratatui_image::Resize::Fit(None))
+            {
                 f.render_widget(ratatui_image::Image::new(&protocol), chunks[2]);
             }
         }

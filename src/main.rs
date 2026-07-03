@@ -48,7 +48,8 @@ enum Commands {
 }
 
 #[cfg(debug_assertions)]
-fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dyn std::error::Error>> {
+fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dyn std::error::Error>>
+{
     let log_dir = std::path::Path::new("./logs");
     let _ = std::fs::create_dir_all(log_dir);
     let file_appender = tracing_appender::rolling::never(log_dir, "bili-hardcore.log");
@@ -58,7 +59,9 @@ fn setup_logging() -> Result<tracing_appender::non_blocking::WorkerGuard, Box<dy
         .with_writer(non_blocking)
         .with_ansi(false)
         .with_target(false)
-        .with_timer(tracing_subscriber::fmt::time::LocalTime::new(time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]")))
+        .with_timer(tracing_subscriber::fmt::time::LocalTime::new(
+            time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"),
+        ))
         .init();
     Ok(guard)
 }
@@ -207,7 +210,9 @@ async fn fetch_latest_tag_via_api(
     client: &reqwest::Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let resp = client
-        .get(format!("https://api.github.com/repos/{REPO}/releases/latest"))
+        .get(format!(
+            "https://api.github.com/repos/{REPO}/releases/latest"
+        ))
         .header("User-Agent", "bili-hardcore")
         .send()
         .await?;
@@ -237,11 +242,7 @@ async fn fetch_latest_tag_via_redirect(
     // 即使跟随了 redirect，也可以从最终 URL 中提取
     let final_url = resp.url().to_string();
     // URL 格式: https://github.com/Karben233/bili-hardcore/releases/tag/v1.0.1-beta
-    if let Some(tag) = final_url
-        .rsplit('/')
-        .next()
-        .filter(|s| s.starts_with('v'))
-    {
+    if let Some(tag) = final_url.rsplit('/').next().filter(|s| s.starts_with('v')) {
         return Ok(tag.to_string());
     }
 
@@ -260,7 +261,9 @@ async fn fetch_latest_tag_via_tags(
     client: &reqwest::Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let resp = client
-        .get(format!("https://api.github.com/repos/{REPO}/tags?per_page=1"))
+        .get(format!(
+            "https://api.github.com/repos/{REPO}/tags?per_page=1"
+        ))
         .header("User-Agent", "bili-hardcore")
         .send()
         .await?;
@@ -287,11 +290,17 @@ async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
     let latest_tag = match fetch_latest_tag_via_api(&client).await {
         Ok(tag) => tag,
         Err(api_err) => {
-            eprintln!("  提示: GitHub API 请求失败（{}），尝试备用方式...", api_err);
+            eprintln!(
+                "  提示: GitHub API 请求失败（{}），尝试备用方式...",
+                api_err
+            );
             match fetch_latest_tag_via_redirect(&client).await {
                 Ok(tag) => tag,
                 Err(redirect_err) => {
-                    eprintln!("  提示: 页面重定向方式也失败了（{}），尝试 Tags API...", redirect_err);
+                    eprintln!(
+                        "  提示: 页面重定向方式也失败了（{}），尝试 Tags API...",
+                        redirect_err
+                    );
                     match fetch_latest_tag_via_tags(&client).await {
                         Ok(tag) => tag,
                         Err(tags_err) => {
@@ -300,8 +309,12 @@ async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
                             eprintln!("    2. 页面重定向: {redirect_err}");
                             eprintln!("    3. Tags API: {tags_err}");
                             eprintln!();
-                            eprintln!("  可能的原因: 网络连接问题、GitHub API 频率限制、DNS 解析失败");
-                            eprintln!("  建议: 请稍后重试，或手动访问 https://github.com/{REPO}/releases 下载最新版本");
+                            eprintln!(
+                                "  可能的原因: 网络连接问题、GitHub API 频率限制、DNS 解析失败"
+                            );
+                            eprintln!(
+                                "  建议: 请稍后重试，或手动访问 https://github.com/{REPO}/releases 下载最新版本"
+                            );
                             std::process::exit(1);
                         }
                     }
@@ -363,7 +376,10 @@ async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
             .args([
                 "-NoProfile",
                 "-Command",
-                &format!("Expand-Archive -Path '{archive_str}' -DestinationPath '{}' -Force", tmp_dir.display()),
+                &format!(
+                    "Expand-Archive -Path '{archive_str}' -DestinationPath '{}' -Force",
+                    tmp_dir.display()
+                ),
             ])
             .status()?;
         if !exit.success() {
@@ -375,7 +391,12 @@ async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(unix)]
     {
         let exit = std::process::Command::new("tar")
-            .args(["-xzf", &archive_path.to_string_lossy(), "-C", &tmp_dir.to_string_lossy()])
+            .args([
+                "-xzf",
+                &archive_path.to_string_lossy(),
+                "-C",
+                &tmp_dir.to_string_lossy(),
+            ])
             .status()?;
         if !exit.success() {
             eprintln!("解压失败");

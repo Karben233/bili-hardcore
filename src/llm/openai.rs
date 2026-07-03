@@ -33,7 +33,12 @@ impl OpenAiClient {
         }
     }
 
-    pub fn ask_stream(&self, question: &str, categories: Vec<String>, tx: mpsc::UnboundedSender<LlmChunk>) {
+    pub fn ask_stream(
+        &self,
+        question: &str,
+        categories: Vec<String>,
+        tx: mpsc::UnboundedSender<LlmChunk>,
+    ) {
         let prompt = build_quiz_prompt(&categories, question, self.enable_thinking);
 
         let mut body = serde_json::json!({
@@ -48,7 +53,11 @@ impl OpenAiClient {
         });
 
         let is_openai = self.base_url.contains("api.openai.com");
-        let effort = if self.enable_thinking { "medium" } else { "none" };
+        let effort = if self.enable_thinking {
+            "medium"
+        } else {
+            "none"
+        };
 
         if is_openai {
             // OpenAI 官方 API 仅识别 reasoning_effort；enable_thinking / thinking 为非官方参数，不下发
@@ -111,15 +120,17 @@ impl OpenAiClient {
 
                         // Always check reasoning_content (fallback for models that think regardless)
                         if let Some(reasoning) = delta["reasoning_content"].as_str()
-                            && !reasoning.is_empty() {
-                                let _ = tx.send(LlmChunk::Thinking(reasoning.to_string()));
-                            }
+                            && !reasoning.is_empty()
+                        {
+                            let _ = tx.send(LlmChunk::Thinking(reasoning.to_string()));
+                        }
 
                         if let Some(content) = delta["content"].as_str()
-                            && !content.is_empty() {
-                                full_content.push_str(content);
-                                let _ = tx.send(LlmChunk::Content(content.to_string()));
-                            }
+                            && !content.is_empty()
+                        {
+                            full_content.push_str(content);
+                            let _ = tx.send(LlmChunk::Content(content.to_string()));
+                        }
                     }
                     Err(e) => {
                         tracing::warn!("SSE stream error: {}", e);

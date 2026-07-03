@@ -224,7 +224,10 @@ impl App {
     /// LLM 单题最大重试次数（不含首次请求）。
     pub const MAX_LLM_RETRIES: u32 = 3;
 
-    pub fn new(cli_config: Option<OpenAiConfig>, captcha_picker: Option<ratatui_image::picker::Picker>) -> Self {
+    pub fn new(
+        cli_config: Option<OpenAiConfig>,
+        captcha_picker: Option<ratatui_image::picker::Picker>,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let config = cli_config
@@ -843,10 +846,12 @@ impl App {
                 image_bytes,
             } => {
                 self.captcha_image = image_bytes.and_then(|b| image::load_from_memory(&b).ok());
-                let (selected, cat_focus, focus, input) = self
-                    .captcha_preserve
-                    .take()
-                    .unwrap_or((vec![], 0, CaptchaFocus::Categories, String::new()));
+                let (selected, cat_focus, focus, input) = self.captcha_preserve.take().unwrap_or((
+                    vec![],
+                    0,
+                    CaptchaFocus::Categories,
+                    String::new(),
+                ));
                 let categories = categories
                     .into_iter()
                     .enumerate()
@@ -872,21 +877,19 @@ impl App {
                 LlmChunk::Content(text) => {
                     self.answer_text.push_str(&text);
                 }
-                LlmChunk::Done(full_text) => {
-                    match parse_answer(&full_text) {
-                        Some(idx) => {
-                            self.chosen_answer_idx = idx;
-                            self.phase = QuizPhase::Submitting;
-                            self.spawn_submit(idx);
-                        }
-                        None => {
-                            tracing::warn!("AI 回复无法解析: {}", full_text);
-                            let _ = self.tx.send(AppEvent::LlmRetry {
-                                reason: format!("AI 回复无法解析: {}", full_text),
-                            });
-                        }
+                LlmChunk::Done(full_text) => match parse_answer(&full_text) {
+                    Some(idx) => {
+                        self.chosen_answer_idx = idx;
+                        self.phase = QuizPhase::Submitting;
+                        self.spawn_submit(idx);
                     }
-                }
+                    None => {
+                        tracing::warn!("AI 回复无法解析: {}", full_text);
+                        let _ = self.tx.send(AppEvent::LlmRetry {
+                            reason: format!("AI 回复无法解析: {}", full_text),
+                        });
+                    }
+                },
                 LlmChunk::Error(msg) => {
                     // 兜底：正常情况下 spawn_llm 内部已将 LlmChunk::Error 转为
                     // AppEvent::LlmRetry，这里只在异常路径触发时同样走重试汇聚。
@@ -918,8 +921,7 @@ impl App {
                     );
                     self.thinking_text.clear();
                     self.answer_text.clear();
-                    let deadline =
-                        std::time::Instant::now() + std::time::Duration::from_secs(secs);
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
                     self.phase = QuizPhase::WaitingRetry { attempt, deadline };
                     let tx = self.tx.clone();
                     tokio::spawn(async move {

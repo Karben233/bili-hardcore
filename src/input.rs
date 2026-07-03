@@ -77,13 +77,11 @@ impl App {
                 KeyCode::Down => {
                     self.config_reset_choice = (self.config_reset_choice + 1).min(2);
                 }
-                KeyCode::Enter => {
-                    match self.config_reset_choice {
-                        0 => self.config_confirm_reset = false,
-                        1 => self.logout_only(),
-                        _ => self.reset_all(),
-                    }
-                }
+                KeyCode::Enter => match self.config_reset_choice {
+                    0 => self.config_confirm_reset = false,
+                    1 => self.logout_only(),
+                    _ => self.reset_all(),
+                },
                 KeyCode::Esc => {
                     self.config_confirm_reset = false;
                 }
@@ -345,13 +343,21 @@ impl App {
             KeyCode::Char(c) if matches!(cs.focus, CaptchaFocus::Input) => {
                 let mut input = cs.input;
                 input.push(c);
-                CaptchaState { input, error: String::new(), ..cs }
+                CaptchaState {
+                    input,
+                    error: String::new(),
+                    ..cs
+                }
             }
             // Backspace (only in Input focus)
             KeyCode::Backspace if matches!(cs.focus, CaptchaFocus::Input) => {
                 let mut input = cs.input;
                 input.pop();
-                CaptchaState { input, error: String::new(), ..cs }
+                CaptchaState {
+                    input,
+                    error: String::new(),
+                    ..cs
+                }
             }
             // Enter on Submit: try to submit with error feedback
             KeyCode::Enter if matches!(cs.focus, CaptchaFocus::Submit) => {
@@ -363,11 +369,20 @@ impl App {
                     .collect::<Vec<_>>()
                     .join(",");
                 if cs.input.is_empty() && ids.is_empty() {
-                    CaptchaState { error: "请选择分类并输入验证码".into(), ..cs }
+                    CaptchaState {
+                        error: "请选择分类并输入验证码".into(),
+                        ..cs
+                    }
                 } else if cs.input.is_empty() {
-                    CaptchaState { error: "请输入验证码".into(), ..cs }
+                    CaptchaState {
+                        error: "请输入验证码".into(),
+                        ..cs
+                    }
                 } else if ids.is_empty() {
-                    CaptchaState { error: "请选择分类".into(), ..cs }
+                    CaptchaState {
+                        error: "请选择分类".into(),
+                        ..cs
+                    }
                 } else {
                     self.selected_categories = cs
                         .categories
