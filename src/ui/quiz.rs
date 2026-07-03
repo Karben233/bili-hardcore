@@ -1,9 +1,42 @@
 use crate::app::{App, CaptchaFocus, CaptchaState, QuizPhase};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
+use unicode_width::UnicodeWidthStr;
 
 fn strip_vendor_prefix(model: &str) -> &str {
     model.rsplit_once('/').map(|(_, name)| name).unwrap_or(model)
+}
+
+/// 计算纯文本在指定终端列宽下自动换行后占据的行数。
+///
+/// 中文 / Emoji 等宽字符按 Unicode 宽度计入，避免按字符数低估行数——
+/// 否则滚动偏移算小了，最新的思考内容仍会被截断在可见区域之外。
+fn wrapped_text_height(text: &str, width: u16) -> usize {
+    let cap = width as usize;
+    if cap == 0 {
+        return text.lines().count().max(1);
+    }
+    let mut total = 0usize;
+    for line in text.lines() {
+        let line_w = UnicodeWidthStr::width(line);
+        total += if line_w == 0 { 1 } else { line_w.div_ceil(cap) };
+    }
+    total.max(1)
+}
+
+/// 计算一组 `Line` 在指定终端列宽下自动换行后占据的行数，用于确定
+/// 选项 + 状态行的固定高度。基于 `Line::width()`（已按 Unicode 宽度汇总）。
+fn wrapped_lines_height(lines: &[Line], width: u16) -> u16 {
+    let cap = width as usize;
+    if cap == 0 {
+        return lines.len().max(1) as u16;
+    }
+    let mut total = 0usize;
+    for line in lines {
+        let line_w = line.width();
+        total += if line_w == 0 { 1 } else { line_w.div_ceil(cap) };
+    }
+    total.max(1) as u16
 }
 
 /// 选中按钮样式：亮色文字 + 加粗
@@ -332,16 +365,23 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 _ => {}
             }
             lines.push(Line::from(""));
-            // Thinking content (shared across all phases)
-            for line in app.thinking_text.lines() {
-                lines.push(Line::from(Span::styled(
-                    line.to_string(),
-                    Style::default().fg(Color::DarkGray),
-                )));
-            }
+            // 选项 + 状态行固定在顶部；思考内容单独占剩余空间并自动滚动到底，
+            // 保证 AI 流式输出的最新思考始终可见（超出区域时不再被截断）。
+            let body_width = left[1].width;
+            let opt_height = wrapped_lines_height(&lines, body_width);
+            let body = Layout::vertical([Constraint::Length(opt_height), Constraint::Min(0)])
+                .split(left[1]);
+            f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), body[0]);
+
+            let think_area = body[1];
+            let think_total = wrapped_text_height(&app.thinking_text, think_area.width);
+            let scroll = think_total.saturating_sub(think_area.height as usize) as u16;
             f.render_widget(
-                Paragraph::new(lines).wrap(Wrap { trim: true }),
-                left[1],
+                Paragraph::new(app.thinking_text.as_str())
+                    .style(Style::default().fg(Color::DarkGray))
+                    .wrap(Wrap { trim: true })
+                    .scroll((scroll, 0)),
+                think_area,
             );
 
             // Right column: history
@@ -666,4 +706,23 @@ fn center_text(
             .alignment(Alignment::Center),
         chunks[1],
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wrapped_text_height_counts_wide_chars() {
+        // 8 个中文字符 = 16 列宽度；列宽 8 时应折成 2 行
+        assert_eq!(wrapped_text_height("一二三四五六七八", 8), 2);
+        // 纯 ASCII：10 字符 / 列宽 5 = 2 行
+        assert_eq!(wrapped_text_height("aaaaaaaaaa", 5), 2);
+        // 短文本不超宽：1 行
+        assert_eq!(wrapped_text_height("abc", 10), 1);
+        // 空文本：占 1 行（max 兜底）
+        assert_eq!(wrapped_text_height("", 10), 1);
+        // 含换行：每段独立折行
+        assert_eq!(wrapped_text_height("aaaa\nbbbb", 4), 2);
+    }
 }
