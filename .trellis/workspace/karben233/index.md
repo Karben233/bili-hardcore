@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
-- **Last Active**: 2026-06-29
+- **Total Sessions**: 20
+- **Last Active**: 2026-07-03
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~637 | Active |
+| `journal-1.md` | ~670 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 20 | 2026-07-03 | 答题界面AI思考内容自动滚动 | `865e4bb` | `main` |
 | 19 | 2026-06-29 | 修复重新进入答题界面得分为0 | `7242402` | `main` |
 | 18 | 2026-06-29 | 修复答题正确率在新题加载时误降的问题 | `e23a279` | `main` |
 | 17 | 2026-06-12 | 增加LLM配置预设模板功能 | `9749e30` | `main` |

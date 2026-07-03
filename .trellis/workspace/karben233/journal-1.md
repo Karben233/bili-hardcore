@@ -635,3 +635,36 @@ LevelOk 重新进入答题时硬编码 score=0，导致得分/正确率显示为
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 答题界面AI思考内容自动滚动
+
+**Date**: 2026-07-03
+**Task**: 答题界面AI思考内容自动滚动
+**Branch**: `main`
+
+### Summary
+
+答题界面左侧思考区新增自动滚动：选项+状态行固定顶部，思考内容基于 unicode-width 精确折行后自动滚到底，AI 流式思考的最新内容始终可见。新增 wrapped_text_height 单测覆盖中文/Emoji 折行计算。check/clippy/test 全绿。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `865e4bb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
