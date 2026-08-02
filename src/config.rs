@@ -33,8 +33,15 @@ pub struct OpenAiConfig {
     pub api_key: String,
     #[serde(default)]
     pub enable_thinking: bool,
+    /// 思考模式强度（DeepSeek: low/high/max），默认 high
+    #[serde(default = "default_reasoning_effort")]
+    pub reasoning_effort: String,
     #[serde(default)]
     pub enable_fast_mode: bool,
+}
+
+fn default_reasoning_effort() -> String {
+    "high".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -19,17 +19,25 @@ pub struct OpenAiClient {
     model: String,
     api_key: String,
     enable_thinking: bool,
+    reasoning_effort: String,
 }
 
 impl OpenAiClient {
     pub fn new(config: &OpenAiConfig) -> Self {
         let http = Client::builder().build().expect("创建 HTTP 客户端失败");
+        // 兜底：配置文件手动编辑导致空值时回退到默认 high
+        let reasoning_effort = if config.reasoning_effort.is_empty() {
+            "high".to_string()
+        } else {
+            config.reasoning_effort.clone()
+        };
         Self {
             http,
             base_url: config.base_url.trim_end_matches('/').to_string(),
             model: config.model.clone(),
             api_key: config.api_key.clone(),
             enable_thinking: config.enable_thinking,
+            reasoning_effort,
         }
     }
 
@@ -54,9 +62,9 @@ impl OpenAiClient {
 
         let is_openai = self.base_url.contains("api.openai.com");
         let effort = if self.enable_thinking {
-            "medium"
+            self.reasoning_effort.clone()
         } else {
-            "none"
+            "none".to_string()
         };
 
         if is_openai {

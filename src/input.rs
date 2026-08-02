@@ -437,6 +437,7 @@ impl App {
             model,
             api_key: key,
             enable_thinking: self.cfg_thinking,
+            reasoning_effort: "high".to_string(),
             enable_fast_mode: self.cfg_fast_mode,
         };
         let _ = crate::config::save_openai_config(&cfg).map_err(|e| tracing::error!("{}", e));
