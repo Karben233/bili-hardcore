@@ -10,10 +10,11 @@ fn focus_index(focus: ConfigFocus) -> usize {
         ConfigFocus::Model => 1,
         ConfigFocus::ApiKey => 2,
         ConfigFocus::ThinkingToggle => 3,
-        ConfigFocus::FastModeToggle => 4,
-        ConfigFocus::SaveBtn => 5,
-        ConfigFocus::TemplateBtn => 6,
-        ConfigFocus::ResetBtn => 7,
+        ConfigFocus::ThinkingEffort => 4,
+        ConfigFocus::FastModeToggle => 5,
+        ConfigFocus::SaveBtn => 6,
+        ConfigFocus::TemplateBtn => 7,
+        ConfigFocus::ResetBtn => 8,
     }
 }
 
@@ -56,6 +57,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
 
     let chunks = Layout::vertical([
         Constraint::Length(2),
+        Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
@@ -139,7 +141,43 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         toggle_inner,
     );
 
-    // Fast mode toggle (chunks[5])
+    // Thinking effort selector (chunks[5])
+    let effort_focused = app.cfg_focus == ConfigFocus::ThinkingEffort;
+    let effort_border_color = if effort_focused {
+        Color::Cyan
+    } else {
+        Color::DarkGray
+    };
+    let effort_block = Block::default()
+        .borders(Borders::ALL)
+        .title(" 思考强度 ")
+        .style(Style::default().fg(effort_border_color));
+    let effort_inner = effort_block.inner(chunks[5]);
+    f.render_widget(effort_block, chunks[5]);
+
+    const EFFORTS: [&str; 3] = ["低", "高", "最大"];
+    let effort_text = EFFORTS
+        .iter()
+        .enumerate()
+        .map(|(i, label)| {
+            if i == app.cfg_effort {
+                format!("[ {} ]", label)
+            } else {
+                format!("  {}  ", label)
+            }
+        })
+        .collect::<String>();
+    let effort_color = if effort_focused {
+        Color::White
+    } else {
+        Color::DarkGray
+    };
+    f.render_widget(
+        Paragraph::new(effort_text).style(Style::default().fg(effort_color)),
+        effort_inner,
+    );
+
+    // Fast mode toggle (chunks[6])
     let fast_focused = app.cfg_focus == ConfigFocus::FastModeToggle;
     let fast_border_color = if fast_focused {
         Color::Cyan
@@ -150,8 +188,8 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         .borders(Borders::ALL)
         .title(" 快速模式 ")
         .style(Style::default().fg(fast_border_color));
-    let fast_inner = fast_block.inner(chunks[5]);
-    f.render_widget(fast_block, chunks[5]);
+    let fast_inner = fast_block.inner(chunks[6]);
+    f.render_widget(fast_block, chunks[6]);
 
     let fast_text = if app.cfg_fast_mode {
         "[✓] 开启 - 取消答题间隔"
@@ -168,7 +206,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         fast_inner,
     );
 
-    // Save button (chunks[6])
+    // Save button (chunks[7])
     let save_focused = app.cfg_focus == ConfigFocus::SaveBtn;
     let save_style = if save_focused {
         selected_style(Color::Green)
@@ -184,10 +222,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new(save_text)
             .style(save_style)
             .alignment(Alignment::Center),
-        chunks[6],
+        chunks[7],
     );
 
-    // Template button (chunks[7])
+    // Template button (chunks[8])
     let tpl_focused = app.cfg_focus == ConfigFocus::TemplateBtn;
     let tpl_style = if tpl_focused {
         selected_style(Color::Cyan)
@@ -203,10 +241,10 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new(tpl_text)
             .style(tpl_style)
             .alignment(Alignment::Center),
-        chunks[7],
+        chunks[8],
     );
 
-    // Reset button (chunks[8])
+    // Reset button (chunks[9])
     let reset_focused = app.cfg_focus == ConfigFocus::ResetBtn;
     let reset_style = if reset_focused {
         selected_style(Color::Red)
@@ -222,14 +260,14 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
         Paragraph::new(reset_text)
             .style(reset_style)
             .alignment(Alignment::Center),
-        chunks[8],
+        chunks[9],
     );
 
     f.render_widget(
         Paragraph::new("↑↓ 切换  Space 勾选  Enter 确认  ESC 返回")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center),
-        chunks[10],
+        chunks[11],
     );
 }
 

@@ -26,6 +26,7 @@ pub enum ConfigFocus {
     Model,
     ApiKey,
     ThinkingToggle,
+    ThinkingEffort,
     FastModeToggle,
     SaveBtn,
     TemplateBtn,
@@ -174,6 +175,8 @@ pub struct App {
     pub cfg_focus: ConfigFocus,
     pub cfg_cursors: [usize; 3],
     pub cfg_thinking: bool,
+    /// 思考强度档位索引：0=low 1=high 2=max
+    pub cfg_effort: usize,
     pub cfg_fast_mode: bool,
     pub config_confirm_reset: bool,
     pub config_reset_choice: u8,
@@ -274,6 +277,15 @@ impl App {
             cfg_focus: ConfigFocus::BaseUrl,
             cfg_fields,
             cfg_thinking: config.as_ref().is_none_or(|c| c.enable_thinking),
+            cfg_effort: config
+                .as_ref()
+                .and_then(|c| match c.reasoning_effort.as_str() {
+                    "low" => Some(0),
+                    "high" => Some(1),
+                    "max" => Some(2),
+                    _ => None,
+                })
+                .unwrap_or(1),
             cfg_fast_mode: config.as_ref().is_some_and(|c| c.enable_fast_mode),
             config_confirm_reset: false,
             config_reset_choice: 0,
@@ -326,6 +338,7 @@ impl App {
         self.cfg_fields = [String::new(), String::new(), String::new()];
         self.cfg_cursors = [0, 0, 0];
         self.cfg_thinking = true;
+        self.cfg_effort = 1;
         self.config_confirm_reset = false;
         self.config_reset_choice = 0;
         self.cfg_preset_open = false;
