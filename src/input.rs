@@ -129,14 +129,18 @@ impl App {
                 }
             }
             KeyCode::Left => {
-                if let Some(idx) = field_idx
+                if self.cfg_focus == ConfigFocus::ThinkingEffort {
+                    self.cfg_effort = (self.cfg_effort + 2) % 3; // decrement with wrap
+                } else if let Some(idx) = field_idx
                     && self.cfg_cursors[idx] > 0
                 {
                     self.cfg_cursors[idx] -= 1;
                 }
             }
             KeyCode::Right => {
-                if let Some(idx) = field_idx
+                if self.cfg_focus == ConfigFocus::ThinkingEffort {
+                    self.cfg_effort = (self.cfg_effort + 1) % 3;
+                } else if let Some(idx) = field_idx
                     && self.cfg_cursors[idx] < self.cfg_fields[idx].len()
                 {
                     self.cfg_cursors[idx] += 1;
@@ -147,7 +151,13 @@ impl App {
                     ConfigFocus::BaseUrl => ConfigFocus::Model,
                     ConfigFocus::Model => ConfigFocus::ApiKey,
                     ConfigFocus::ApiKey => ConfigFocus::ThinkingToggle,
-                    ConfigFocus::ThinkingToggle => ConfigFocus::ThinkingEffort,
+                    ConfigFocus::ThinkingToggle => {
+                        if self.cfg_thinking {
+                            ConfigFocus::ThinkingEffort
+                        } else {
+                            ConfigFocus::FastModeToggle
+                        }
+                    }
                     ConfigFocus::ThinkingEffort => ConfigFocus::FastModeToggle,
                     ConfigFocus::FastModeToggle => ConfigFocus::SaveBtn,
                     ConfigFocus::SaveBtn => ConfigFocus::TemplateBtn,
@@ -160,7 +170,13 @@ impl App {
                     ConfigFocus::BaseUrl => ConfigFocus::ResetBtn,
                     ConfigFocus::Model => ConfigFocus::BaseUrl,
                     ConfigFocus::ApiKey => ConfigFocus::Model,
-                    ConfigFocus::FastModeToggle => ConfigFocus::ThinkingEffort,
+                    ConfigFocus::FastModeToggle => {
+                        if self.cfg_thinking {
+                            ConfigFocus::ThinkingEffort
+                        } else {
+                            ConfigFocus::ThinkingToggle
+                        }
+                    }
                     ConfigFocus::ThinkingEffort => ConfigFocus::ThinkingToggle,
                     ConfigFocus::ThinkingToggle => ConfigFocus::ApiKey,
                     ConfigFocus::SaveBtn => ConfigFocus::FastModeToggle,
