@@ -95,6 +95,7 @@ impl App {
             ConfigFocus::Model => Some(1),
             ConfigFocus::ApiKey => Some(2),
             ConfigFocus::ThinkingToggle
+            | ConfigFocus::ThinkingEffort
             | ConfigFocus::FastModeToggle
             | ConfigFocus::SaveBtn
             | ConfigFocus::TemplateBtn
@@ -110,6 +111,7 @@ impl App {
                     self.config_reset_choice = 0;
                 }
                 ConfigFocus::ThinkingToggle => self.cfg_thinking = !self.cfg_thinking,
+                ConfigFocus::ThinkingEffort => self.cfg_effort = (self.cfg_effort + 1) % 3,
                 ConfigFocus::FastModeToggle => self.cfg_fast_mode = !self.cfg_fast_mode,
                 ConfigFocus::TemplateBtn => {
                     self.cfg_preset_open = true;
@@ -127,14 +129,18 @@ impl App {
                 }
             }
             KeyCode::Left => {
-                if let Some(idx) = field_idx
+                if self.cfg_focus == ConfigFocus::ThinkingEffort {
+                    self.cfg_effort = (self.cfg_effort + 2) % 3; // decrement with wrap
+                } else if let Some(idx) = field_idx
                     && self.cfg_cursors[idx] > 0
                 {
                     self.cfg_cursors[idx] -= 1;
                 }
             }
             KeyCode::Right => {
-                if let Some(idx) = field_idx
+                if self.cfg_focus == ConfigFocus::ThinkingEffort {
+                    self.cfg_effort = (self.cfg_effort + 1) % 3;
+                } else if let Some(idx) = field_idx
                     && self.cfg_cursors[idx] < self.cfg_fields[idx].len()
                 {
                     self.cfg_cursors[idx] += 1;
@@ -145,7 +151,14 @@ impl App {
                     ConfigFocus::BaseUrl => ConfigFocus::Model,
                     ConfigFocus::Model => ConfigFocus::ApiKey,
                     ConfigFocus::ApiKey => ConfigFocus::ThinkingToggle,
-                    ConfigFocus::ThinkingToggle => ConfigFocus::FastModeToggle,
+                    ConfigFocus::ThinkingToggle => {
+                        if self.cfg_thinking {
+                            ConfigFocus::ThinkingEffort
+                        } else {
+                            ConfigFocus::FastModeToggle
+                        }
+                    }
+                    ConfigFocus::ThinkingEffort => ConfigFocus::FastModeToggle,
                     ConfigFocus::FastModeToggle => ConfigFocus::SaveBtn,
                     ConfigFocus::SaveBtn => ConfigFocus::TemplateBtn,
                     ConfigFocus::TemplateBtn => ConfigFocus::ResetBtn,
@@ -157,7 +170,14 @@ impl App {
                     ConfigFocus::BaseUrl => ConfigFocus::ResetBtn,
                     ConfigFocus::Model => ConfigFocus::BaseUrl,
                     ConfigFocus::ApiKey => ConfigFocus::Model,
-                    ConfigFocus::FastModeToggle => ConfigFocus::ThinkingToggle,
+                    ConfigFocus::FastModeToggle => {
+                        if self.cfg_thinking {
+                            ConfigFocus::ThinkingEffort
+                        } else {
+                            ConfigFocus::ThinkingToggle
+                        }
+                    }
+                    ConfigFocus::ThinkingEffort => ConfigFocus::ThinkingToggle,
                     ConfigFocus::ThinkingToggle => ConfigFocus::ApiKey,
                     ConfigFocus::SaveBtn => ConfigFocus::FastModeToggle,
                     ConfigFocus::TemplateBtn => ConfigFocus::SaveBtn,
@@ -166,10 +186,12 @@ impl App {
             }
             KeyCode::Char(' ')
                 if self.cfg_focus == ConfigFocus::ThinkingToggle
+                    || self.cfg_focus == ConfigFocus::ThinkingEffort
                     || self.cfg_focus == ConfigFocus::FastModeToggle =>
             {
                 match self.cfg_focus {
                     ConfigFocus::ThinkingToggle => self.cfg_thinking = !self.cfg_thinking,
+                    ConfigFocus::ThinkingEffort => self.cfg_effort = (self.cfg_effort + 1) % 3,
                     ConfigFocus::FastModeToggle => self.cfg_fast_mode = !self.cfg_fast_mode,
                     _ => {}
                 }
@@ -437,6 +459,7 @@ impl App {
             model,
             api_key: key,
             enable_thinking: self.cfg_thinking,
+            reasoning_effort: ["low", "high", "max"][self.cfg_effort].to_string(),
             enable_fast_mode: self.cfg_fast_mode,
         };
         let _ = crate::config::save_openai_config(&cfg).map_err(|e| tracing::error!("{}", e));
