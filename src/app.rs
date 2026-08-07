@@ -3,6 +3,7 @@ use crate::config::{self, AuthData, OpenAiConfig};
 use crate::llm::LlmChunk;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 // --- Pages ---
 
@@ -221,6 +222,9 @@ pub struct App {
 
     // LLM retry counter
     pub llm_retries: u32,
+
+    // Cancellation token for quiz background tasks
+    pub quiz_token: CancellationToken,
 }
 
 impl App {
@@ -315,17 +319,26 @@ impl App {
             captcha_preserve: None,
             selected_categories: config::load_categories(),
             llm_retries: 0,
+            quiz_token: CancellationToken::new(),
         }
     }
 
     pub fn go(&mut self, page: Page) {
         self.prev_page.push(self.page);
         self.page = page;
+        if page == Page::Quiz {
+            self.quiz_token = CancellationToken::new();
+        }
     }
 
     pub fn back(&mut self) {
+        let leaving_quiz = self.page == Page::Quiz;
         if let Some(p) = self.prev_page.pop() {
             self.page = p;
+        }
+        if leaving_quiz {
+            self.quiz_token.cancel();
+            self.quiz_token = CancellationToken::new();
         }
     }
 
@@ -363,6 +376,9 @@ impl App {
         self.spinner = (self.spinner + 1) % SPINNER.len();
 
         // ShowingResult countdown (~100ms/tick, 5 ticks = 0.5s)
+        if self.quiz_token.is_cancelled() {
+            return;
+        }
         if let QuizPhase::ShowingResult { correct, countdown } = self.phase {
             if countdown > 1 {
                 self.phase = QuizPhase::ShowingResult {
@@ -612,6 +628,7 @@ impl App {
 
     pub fn spawn_llm(&self) {
         if let Some(ref cfg) = self.config {
+            let token = self.quiz_token.clone();
             let client = crate::llm::OpenAiClient::new(cfg);
             let prompt = format!(
                 "题目:{}\n答案:{:?}",
@@ -628,10 +645,11 @@ impl App {
             );
             tracing::info!("LLM prompt:\n{}", full_prompt);
 
-            client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx);
+            client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx, token.clone());
 
             tokio::spawn(async move {
                 while let Some(chunk) = llm_rx.recv().await {
+                    if token.is_cancelled() { return; }
                     match chunk {
                         LlmChunk::Thinking(_) | LlmChunk::Content(_) => {
                             let _ = tx.send(AppEvent::LlmChunk(chunk));
@@ -936,9 +954,11 @@ impl App {
                     self.answer_text.clear();
                     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(secs);
                     self.phase = QuizPhase::WaitingRetry { attempt, deadline };
+                    let ct = self.quiz_token.clone();
                     let tx = self.tx.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+                        if ct.is_cancelled() { return; }
                         let _ = tx.send(AppEvent::LlmRetryFire);
                     });
                 }

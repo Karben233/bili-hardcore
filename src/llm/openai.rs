@@ -2,8 +2,8 @@ use crate::config::{OpenAiConfig, build_quiz_prompt};
 use eventsource_stream::Eventsource;
 use futures::StreamExt;
 use reqwest::Client;
-
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Debug)]
 pub enum LlmChunk {
@@ -46,6 +46,7 @@ impl OpenAiClient {
         question: &str,
         categories: Vec<String>,
         tx: mpsc::UnboundedSender<LlmChunk>,
+        token: CancellationToken,
     ) {
         let prompt = build_quiz_prompt(&categories, question, self.enable_thinking);
 
@@ -68,7 +69,6 @@ impl OpenAiClient {
         };
 
         if is_openai {
-            // OpenAI 官方 API 仅识别 reasoning_effort；enable_thinking / thinking 为非官方参数，不下发
             body["reasoning_effort"] = serde_json::json!(effort);
         } else {
             body["enable_thinking"] = serde_json::json!(self.enable_thinking);
@@ -83,6 +83,7 @@ impl OpenAiClient {
         let api_key = self.api_key.clone();
 
         tokio::spawn(async move {
+            if token.is_cancelled() { return; }
             let resp = match http
                 .post(&url)
                 .header("Content-Type", "application/json")
@@ -114,6 +115,7 @@ impl OpenAiClient {
             let mut full_content = String::new();
 
             while let Some(event) = stream.next().await {
+                if token.is_cancelled() { return; }
                 match event {
                     Ok(event) => {
                         if event.data == "[DONE]" {
@@ -126,7 +128,6 @@ impl OpenAiClient {
 
                         let delta = &json["choices"][0]["delta"];
 
-                        // Always check reasoning_content (fallback for models that think regardless)
                         if let Some(reasoning) = delta["reasoning_content"].as_str()
                             && !reasoning.is_empty()
                         {
@@ -147,7 +148,9 @@ impl OpenAiClient {
                 }
             }
 
-            let _ = tx.send(LlmChunk::Done(full_content));
+            if !token.is_cancelled() {
+                let _ = tx.send(LlmChunk::Done(full_content));
+            }
         });
     }
 }
