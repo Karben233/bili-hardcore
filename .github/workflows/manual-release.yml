@@ -192,6 +192,7 @@ jobs:
             {
               echo "content<<EOF"
               cat "$NOTES_FILE"
+              echo
               echo "EOF"
             } >> $GITHUB_OUTPUT
           else
