@@ -48,6 +48,7 @@ pub fn run(config: Option<OpenAiConfig>) -> Result<(), Box<dyn std::error::Error
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Bili-Hardcore")
+            .with_icon(app_icon())
             .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([900.0, 650.0])
             .with_decorations(false),
@@ -59,6 +60,18 @@ pub fn run(config: Option<OpenAiConfig>) -> Result<(), Box<dyn std::error::Error
         Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, config)))),
     )
     .map_err(|error| error.to_string().into())
+}
+
+fn app_icon() -> egui::IconData {
+    let image = image::load_from_memory(include_bytes!("../assets/app-icon.png"))
+        .expect("embedded application icon must be a valid PNG")
+        .into_rgba8();
+    let (width, height) = image.dimensions();
+    egui::IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    }
 }
 
 struct GuiApp {

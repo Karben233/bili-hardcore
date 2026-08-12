@@ -34,13 +34,21 @@ dirs = "6"
 urlencoding = "2"
 unicode-width = "0.2"
 ratatui-image = { version = "9", default-features = false, features = ["crossterm"] }
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 webbrowser = "1"
 eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "glow", "x11"] }
 lucide-icons = { version = "1.31", optional = true }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+] }
+
+[build-dependencies]
+winresource = { version = "0.1.31", default-features = false }
 
 [profile.release]
 opt-level = "z"

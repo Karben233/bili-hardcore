@@ -1,3 +1,5 @@
+#![cfg_attr(all(windows, feature = "gui"), windows_subsystem = "windows")]
+
 mod api;
 mod app;
 mod config;
@@ -80,7 +82,19 @@ fn setup_logging() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => {
+            #[cfg(all(windows, feature = "gui"))]
+            windows_console::attach_for_cli();
+            error.exit();
+        }
+    };
+
+    #[cfg(all(windows, feature = "gui"))]
+    if cli.tui || cli.command.is_some() {
+        windows_console::attach_for_cli();
+    }
 
     if let Some(cmd) = &cli.command {
         match cmd {
@@ -109,8 +123,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "gui")]
     {
-        #[cfg(windows)]
-        windows_console::detach_for_gui();
         return gui::run(cli_config);
     }
 
