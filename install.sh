@@ -38,14 +38,9 @@ case "$ARCH" in
   *)             error "不支持的架构: $ARCH" ;;
 esac
 
-# --- Pick variant ---
-if [ "$os" = "linux" ]; then
-  # Prefer musl for static linking
-  variant="-musl"
-  info "Linux 检测到，优先使用 musl 静态链接版本"
-else
-  variant=""
-fi
+# The glibc package includes both the desktop GUI and TUI. Musl releases are
+# intentionally TUI-only compatibility builds and remain available manually.
+variant=""
 
 # --- Determine platform string ---
 if [ "$os" = "darwin" ]; then

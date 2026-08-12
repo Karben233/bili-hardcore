@@ -3,9 +3,13 @@ mod app;
 mod config;
 mod crypto;
 mod error;
+#[cfg(feature = "gui")]
+mod gui;
 mod input;
 mod llm;
 mod ui;
+#[cfg(windows)]
+mod windows_console;
 
 use app::App;
 use clap::Parser;
@@ -28,6 +32,9 @@ use std::io;
     next_help_heading = "参数"
 )]
 struct Cli {
+    /// 使用终端界面而不是桌面窗口
+    #[arg(long)]
+    tui: bool,
     /// API 基础 URL
     url: Option<String>,
     /// 模型名称
@@ -96,7 +103,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let _log_guard = setup_logging()?;
 
-    // TUI setup
+    if cli.tui {
+        return run_tui(cli_config).await;
+    }
+
+    #[cfg(feature = "gui")]
+    {
+        #[cfg(windows)]
+        windows_console::detach_for_gui();
+        return gui::run(cli_config);
+    }
+
+    #[cfg(not(feature = "gui"))]
+    {
+        run_tui(cli_config).await
+    }
+}
+
+async fn run_tui(cli_config: Option<OpenAiConfig>) -> Result<(), Box<dyn std::error::Error>> {
     terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
     crossterm::execute!(stdout, EnterAlternateScreen)?;
@@ -341,8 +365,7 @@ async fn run_update() -> Result<(), Box<dyn std::error::Error>> {
     } else if cfg!(target_os = "macos") {
         format!("bili-hardcore-{latest_tag}-darwin-universal.tar.gz")
     } else {
-        let variant = "-musl";
-        format!("bili-hardcore-{latest_tag}-linux-{arch}{variant}.tar.gz")
+        format!("bili-hardcore-{latest_tag}-linux-{arch}.tar.gz")
     };
 
     let url = format!("https://github.com/{REPO}/releases/download/{latest_tag}/{filename}");
@@ -457,4 +480,48 @@ fn detect_platform() -> Result<(&'static str, &'static str), Box<dyn std::error:
     };
 
     Ok((os, arch))
+}
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn gui_is_default_and_tui_is_opt_in() {
+        let gui = Cli::try_parse_from(["bili-hardcore"]).unwrap();
+        assert!(!gui.tui);
+        let tui = Cli::try_parse_from(["bili-hardcore", "--tui"]).unwrap();
+        assert!(tui.tui);
+    }
+
+    #[test]
+    fn legacy_config_arguments_still_parse() {
+        let cli = Cli::try_parse_from([
+            "bili-hardcore",
+            "https://example.com/v1/chat/completions",
+            "model-name",
+            "--api-key",
+            "secret",
+        ])
+        .unwrap();
+        assert_eq!(cli.model.as_deref(), Some("model-name"));
+        assert_eq!(cli.api_key.as_deref(), Some("secret"));
+    }
+
+    #[test]
+    fn maintenance_commands_still_parse() {
+        assert!(matches!(
+            Cli::try_parse_from(["bili-hardcore", "update"])
+                .unwrap()
+                .command,
+            Some(Commands::Update)
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["bili-hardcore", "uninstall"])
+                .unwrap()
+                .command,
+            Some(Commands::Uninstall)
+        ));
+    }
 }

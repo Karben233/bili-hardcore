@@ -48,6 +48,14 @@ pub enum QuizPhase {
         retry: bool,
     },
     CheckingLevel,
+    LevelVerified {
+        level: i64,
+        countdown: u8,
+    },
+    LevelInsufficient {
+        level: i64,
+    },
+    LevelCheckFailed(String),
     FetchingQuestion,
     WaitingLlm,
     WaitingRetry {
@@ -65,6 +73,12 @@ pub enum QuizPhase {
         scores: Vec<ScoreItem>,
     },
     Error(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuizIntent {
+    Answer,
+    LoginOnly,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -92,11 +106,66 @@ pub struct CategoryItem {
     pub selected: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreItem {
     pub category: String,
     pub score: i64,
     pub total: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionStatus {
+    Passed,
+    Failed,
+    Interrupted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QuestionHistory {
+    pub question_number: u32,
+    pub question: String,
+    pub options: Vec<String>,
+    pub chosen_index: usize,
+    pub correct: bool,
+    #[serde(default)]
+    pub correct_index: Option<usize>,
+}
+
+impl From<&HistoryItem> for QuestionHistory {
+    fn from(item: &HistoryItem) -> Self {
+        Self {
+            question_number: item.num,
+            question: item.question.clone(),
+            options: item.options.clone(),
+            chosen_index: item.chosen_idx,
+            correct: item.correct,
+            correct_index: item.correct_idx,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionHistory {
+    pub id: String,
+    pub started_at: i64,
+    #[serde(default)]
+    pub finished_at: Option<i64>,
+    pub updated_at: i64,
+    pub model: String,
+    #[serde(default)]
+    pub categories: Vec<String>,
+    pub status: SessionStatus,
+    pub completed_questions: u32,
+    pub score: i64,
+    #[serde(default)]
+    pub category_scores: Vec<ScoreItem>,
+    #[serde(default)]
+    pub failure_stage: Option<String>,
+    #[serde(default)]
+    pub failure_message: Option<String>,
+    #[serde(default)]
+    pub questions: Vec<QuestionHistory>,
 }
 
 // --- Async events from background tasks ---
@@ -111,8 +180,9 @@ pub enum AppEvent {
     },
     LoginOk(AuthData),
     LoginPending,
-    LevelOk,
+    LevelOk(i64),
     LevelFail(i64),
+    LevelCheckFailed(String),
     QuestionReady {
         num: u32,
         question: String,
@@ -126,6 +196,7 @@ pub enum AppEvent {
         token: String,
         image_bytes: Option<Vec<u8>>,
     },
+    CaptchaRejected,
     LlmChunk(LlmChunk),
     LlmRetry {
         reason: String,
@@ -193,6 +264,8 @@ pub struct App {
     pub question_text: String,
     pub spinner: usize,
     pub history: Vec<HistoryItem>,
+    pub sessions: Vec<SessionHistory>,
+    pub active_session: Option<SessionHistory>,
     pub history_scroll: usize,
     pub chosen_answer_idx: usize,
 
@@ -216,6 +289,7 @@ pub struct App {
 
     // Captcha refresh: preserve selections and focus
     pub captcha_preserve: Option<(Vec<bool>, usize, CaptchaFocus, String)>,
+    pub captcha_error: Option<String>,
 
     // Selected category names for LLM prompt
     pub selected_categories: Vec<String>,
@@ -225,6 +299,7 @@ pub struct App {
 
     // Cancellation token for quiz background tasks
     pub quiz_token: CancellationToken,
+    pub quiz_intent: QuizIntent,
 }
 
 impl App {
@@ -303,6 +378,8 @@ impl App {
             question_text: String::new(),
             spinner: 0,
             history: config::load_history(),
+            sessions: config::load_sessions(),
+            active_session: None,
             history_scroll: 0,
             chosen_answer_idx: 0,
             thinking_text: String::new(),
@@ -317,9 +394,11 @@ impl App {
             captcha_picker,
             captcha_image: None,
             captcha_preserve: None,
+            captcha_error: None,
             selected_categories: config::load_categories(),
             llm_retries: 0,
             quiz_token: CancellationToken::new(),
+            quiz_intent: QuizIntent::Answer,
         }
     }
 
@@ -337,14 +416,180 @@ impl App {
             self.page = p;
         }
         if leaving_quiz {
-            self.quiz_token.cancel();
-            self.quiz_token = CancellationToken::new();
+            self.stop_quiz("用户退出答题", "quiz_exit");
         }
+    }
+
+    pub(crate) fn stop_quiz(&mut self, message: &str, stage: &str) {
+        self.interrupt_session(message, stage);
+        self.quiz_token.cancel();
+        self.quiz_token = CancellationToken::new();
+    }
+
+    pub(crate) fn enter_config(&mut self) {
+        let is_first_time = self.config.is_none();
+        if let Some(ref config) = self.config {
+            self.cfg_fields = [
+                config.base_url.clone(),
+                config.model.clone(),
+                config.api_key.clone(),
+            ];
+        }
+        self.cfg_cursors = [
+            self.cfg_fields[0].len(),
+            self.cfg_fields[1].len(),
+            self.cfg_fields[2].len(),
+        ];
+        self.cfg_focus = ConfigFocus::BaseUrl;
+        self.cfg_preset_open = is_first_time;
+        self.cfg_preset_sel = 0;
+        self.go(Page::Config);
+    }
+
+    pub(crate) fn apply_preset(&mut self, index: usize) {
+        if let Some(preset) = config::load_presets().get(index) {
+            self.cfg_fields[0] = preset.config.base_url.clone();
+            self.cfg_fields[1] = preset.config.model.clone();
+            self.cfg_cursors[0] = self.cfg_fields[0].len();
+            self.cfg_cursors[1] = self.cfg_fields[1].len();
+        }
+    }
+
+    pub(crate) fn save_config(&mut self) -> Result<(), String> {
+        self.persist_config()?;
+        self.back();
+        if self.page == Page::Quiz {
+            self.spawn_login();
+        }
+        Ok(())
+    }
+
+    pub(crate) fn persist_config(&mut self) -> Result<(), String> {
+        let base_url = self.cfg_fields[0].trim().trim_end_matches('/').to_string();
+        let model = self.cfg_fields[1].trim().to_string();
+        let api_key = self.cfg_fields[2].trim().to_string();
+        if base_url.is_empty() || model.is_empty() || api_key.is_empty() {
+            return Err("请完整填写 API URL、模型名称和 API Key".into());
+        }
+        if !(base_url.starts_with("https://") || base_url.starts_with("http://")) {
+            return Err("API URL 必须以 http:// 或 https:// 开头".into());
+        }
+
+        let config = OpenAiConfig {
+            base_url,
+            model,
+            api_key,
+            enable_thinking: self.cfg_thinking,
+            reasoning_effort: ["low", "high", "max"][self.cfg_effort].to_string(),
+            enable_fast_mode: self.cfg_fast_mode,
+        };
+        config::save_openai_config(&config).map_err(|error| error.to_string())?;
+        self.config = Some(config);
+        Ok(())
+    }
+
+    pub(crate) fn enter_quiz(&mut self) {
+        self.quiz_intent = QuizIntent::Answer;
+        self.go(Page::Quiz);
+        if self.config.is_none() {
+            self.phase = QuizPhase::NotConfigured;
+        } else {
+            self.spawn_login();
+        }
+    }
+
+    #[cfg_attr(not(feature = "gui"), allow(dead_code))]
+    pub(crate) fn enter_login(&mut self) {
+        self.quiz_intent = QuizIntent::LoginOnly;
+        self.go(Page::Quiz);
+        self.spawn_login();
+    }
+
+    #[cfg_attr(not(feature = "gui"), allow(dead_code))]
+    pub(crate) fn retry_level_check(&mut self) {
+        if self.auth.is_some() {
+            self.phase = QuizPhase::CheckingLevel;
+            self.spawn_level_check();
+        } else {
+            self.spawn_login();
+        }
+    }
+
+    #[cfg_attr(not(feature = "gui"), allow(dead_code))]
+    pub(crate) fn relogin_for_quiz(&mut self) {
+        let _ = config::delete_auth();
+        self.auth = None;
+        self.bili = BiliClient::new();
+        self.spawn_login();
+    }
+
+    pub(crate) fn refresh_captcha(&mut self) {
+        if let QuizPhase::Captcha(state) = &self.phase {
+            let selected = state.categories.iter().map(|item| item.selected).collect();
+            self.captcha_preserve = Some((selected, state.cat_focus, state.focus, String::new()));
+            self.captcha_error = None;
+            self.captcha_image = None;
+            self.phase = QuizPhase::FetchingQuestion;
+            self.spawn_fetch_captcha();
+        }
+    }
+
+    pub(crate) fn toggle_captcha_category(&mut self, index: usize) {
+        let QuizPhase::Captcha(state) = &mut self.phase else {
+            return;
+        };
+        let selected_count = state.categories.iter().filter(|item| item.selected).count();
+        if let Some(item) = state.categories.get_mut(index)
+            && (item.selected || selected_count < 3)
+        {
+            item.selected = !item.selected;
+            state.error.clear();
+        }
+    }
+
+    pub(crate) fn submit_captcha(&mut self) -> Result<(), String> {
+        let QuizPhase::Captcha(state) = &self.phase else {
+            return Err("验证码尚未加载".into());
+        };
+        let ids = state
+            .categories
+            .iter()
+            .filter(|item| item.selected)
+            .map(|item| item.id.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let input = state.input.trim().to_string();
+        let token = state.captcha_token.clone();
+        let categories = state
+            .categories
+            .iter()
+            .filter(|item| item.selected)
+            .map(|item| item.name.clone())
+            .collect::<Vec<_>>();
+        if ids.is_empty() || input.is_empty() {
+            return Err(match (ids.is_empty(), input.is_empty()) {
+                (true, true) => "请选择分类并输入验证码",
+                (true, false) => "请选择分类",
+                (false, true) => "请输入验证码",
+                (false, false) => unreachable!(),
+            }
+            .into());
+        }
+
+        self.selected_categories = categories;
+        self.captcha_error = None;
+        config::save_categories(&self.selected_categories).map_err(|error| error.to_string())?;
+        let selected = state.categories.iter().map(|item| item.selected).collect();
+        self.captcha_preserve = Some((selected, state.cat_focus, state.focus, input.clone()));
+        self.spawn_captcha_submit(&input, &token, &ids);
+        self.phase = QuizPhase::FetchingQuestion;
+        Ok(())
     }
 
     pub fn reset_all(&mut self) {
         let _ = config::delete_openai_config();
         let _ = config::delete_auth();
+        let _ = config::delete_local_history();
         self.config = None;
         self.auth = None;
         self.bili = BiliClient::new();
@@ -356,6 +601,10 @@ impl App {
         self.config_reset_choice = 0;
         self.cfg_preset_open = false;
         self.cfg_preset_sel = 0;
+        self.history.clear();
+        self.sessions.clear();
+        self.active_session = None;
+        self.selected_categories.clear();
         self.back();
     }
 
@@ -397,6 +646,7 @@ impl App {
                     correct_idx: None,
                 });
                 let _ = config::save_history(&self.history);
+                self.record_session_question(correct);
                 if num < 100 {
                     self.phase = QuizPhase::FetchingQuestion;
                     self.spawn_fetch_question();
@@ -404,6 +654,24 @@ impl App {
                     self.phase = QuizPhase::Submitting;
                     self.fetch_final();
                 }
+            }
+        }
+
+        if let QuizPhase::LevelVerified { level, countdown } = self.phase {
+            if countdown > 1 {
+                self.phase = QuizPhase::LevelVerified {
+                    level,
+                    countdown: countdown - 1,
+                };
+            } else {
+                if self.quiz_intent == QuizIntent::LoginOnly {
+                    self.phase = QuizPhase::NotConfigured;
+                    self.back();
+                    return;
+                }
+                self.score = self.history.iter().filter(|item| item.correct).count() as i64;
+                self.phase = QuizPhase::FetchingQuestion;
+                self.spawn_fetch_question();
             }
         }
 
@@ -527,14 +795,14 @@ impl App {
             match bili.get_account_info().await {
                 Ok(info) => {
                     let lv = info["level"].as_i64().unwrap_or(0);
-                    if lv == 6 {
-                        let _ = tx.send(AppEvent::LevelOk);
+                    if lv >= 6 {
+                        let _ = tx.send(AppEvent::LevelOk(lv));
                     } else {
                         let _ = tx.send(AppEvent::LevelFail(lv));
                     }
                 }
                 Err(e) => {
-                    let _ = tx.send(AppEvent::Fail(e.to_string()));
+                    let _ = tx.send(AppEvent::LevelCheckFailed(e.to_string()));
                 }
             }
         });
@@ -645,11 +913,18 @@ impl App {
             );
             tracing::info!("LLM prompt:\n{}", full_prompt);
 
-            client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx, token.clone());
+            client.ask_stream(
+                &prompt,
+                self.selected_categories.clone(),
+                llm_tx,
+                token.clone(),
+            );
 
             tokio::spawn(async move {
                 while let Some(chunk) = llm_rx.recv().await {
-                    if token.is_cancelled() { return; }
+                    if token.is_cancelled() {
+                        return;
+                    }
                     match chunk {
                         LlmChunk::Thinking(_) | LlmChunk::Content(_) => {
                             let _ = tx.send(AppEvent::LlmChunk(chunk));
@@ -749,7 +1024,7 @@ impl App {
                     }
                 }
                 _ => {
-                    let _ = tx.send(AppEvent::Fail("验证码验证失败".into()));
+                    let _ = tx.send(AppEvent::CaptchaRejected);
                 }
             }
         });
@@ -795,11 +1070,13 @@ impl App {
                 | AppEvent::QrReady { .. }
                 | AppEvent::LoginOk(_)
                 | AppEvent::LoginPending
-                | AppEvent::LevelOk
+                | AppEvent::LevelOk(_)
                 | AppEvent::LevelFail(_)
+                | AppEvent::LevelCheckFailed(_)
                 | AppEvent::QuestionReady { .. }
                 | AppEvent::NeedCaptcha
                 | AppEvent::CaptchaData { .. }
+                | AppEvent::CaptchaRejected
                 | AppEvent::LlmChunk(_)
                 | AppEvent::LlmRetry { .. }
                 | AppEvent::LlmRetryFire
@@ -831,16 +1108,17 @@ impl App {
                 self.spawn_level_check();
             }
             AppEvent::LoginPending => {}
-            AppEvent::LevelOk => {
-                // 从历史记录恢复累计得分：历史中 correct==true 的计数恒等于
-                // 服务器返回的累计答对数（correct 由 score 派生，见 SubmitOk），
-                // 避免重新进入答题界面时得分/正确率被重置为 0。
-                self.score = self.history.iter().filter(|h| h.correct).count() as i64;
-                self.phase = QuizPhase::FetchingQuestion;
-                self.spawn_fetch_question();
+            AppEvent::LevelOk(level) => {
+                self.phase = QuizPhase::LevelVerified {
+                    level,
+                    countdown: 8,
+                };
             }
             AppEvent::LevelFail(lv) => {
-                self.phase = QuizPhase::Error(format!("当前用户等级 {}，需满6级才能参与答题", lv));
+                self.phase = QuizPhase::LevelInsufficient { level: lv };
+            }
+            AppEvent::LevelCheckFailed(message) => {
+                self.phase = QuizPhase::LevelCheckFailed(message);
             }
             AppEvent::QuestionReady {
                 num,
@@ -852,6 +1130,7 @@ impl App {
                 self.question_text = question;
                 self.answers = answers;
                 self.question_id = id;
+                self.ensure_active_session();
                 self.thinking_text.clear();
                 self.answer_text.clear();
                 self.llm_retries = 0;
@@ -894,8 +1173,16 @@ impl App {
                     captcha_token: token,
                     input,
                     focus,
-                    error: String::new(),
+                    error: self.captcha_error.take().unwrap_or_default(),
                 });
+            }
+            AppEvent::CaptchaRejected => {
+                if let Some(state) = &mut self.captcha_preserve {
+                    state.3.clear();
+                }
+                self.captcha_error = Some("验证码错误，请重新输入".into());
+                self.phase = QuizPhase::FetchingQuestion;
+                self.spawn_fetch_captcha();
             }
             AppEvent::LlmChunk(chunk) => match chunk {
                 LlmChunk::Thinking(text) => {
@@ -954,7 +1241,9 @@ impl App {
                     let tx = self.tx.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
-                        if ct.is_cancelled() { return; }
+                        if ct.is_cancelled() {
+                            return;
+                        }
                         let _ = tx.send(AppEvent::LlmRetryFire);
                     });
                 }
@@ -976,15 +1265,127 @@ impl App {
                 };
             }
             AppEvent::SubmitFail(msg) => {
+                self.interrupt_session(&msg, "answer_submit");
                 self.phase = QuizPhase::Error(msg);
             }
             AppEvent::QuizDone { score, scores } => {
+                self.finish_session(score, &scores);
                 self.phase = QuizPhase::Finished { score, scores };
             }
             AppEvent::Fail(msg) => {
+                self.interrupt_session(&msg, "workflow");
                 self.phase = QuizPhase::Error(msg);
             }
         }
+    }
+
+    fn ensure_active_session(&mut self) {
+        if self.active_session.is_some() {
+            return;
+        }
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let questions = self
+            .history
+            .iter()
+            .map(QuestionHistory::from)
+            .collect::<Vec<_>>();
+        self.active_session = Some(SessionHistory {
+            id: format!("{now}-{}", self.sessions.len() + 1),
+            started_at: now,
+            finished_at: None,
+            updated_at: now,
+            model: self
+                .config
+                .as_ref()
+                .map(|config| config.model.clone())
+                .unwrap_or_else(|| "未记录".into()),
+            categories: self.selected_categories.clone(),
+            status: SessionStatus::Interrupted,
+            completed_questions: questions.len() as u32,
+            score: self.score,
+            category_scores: vec![],
+            failure_stage: None,
+            failure_message: None,
+            questions,
+        });
+    }
+
+    fn record_session_question(&mut self, correct: bool) {
+        self.ensure_active_session();
+        let Some(session) = &mut self.active_session else {
+            return;
+        };
+        let item = HistoryItem {
+            num: self.question_num,
+            question: self.question_text.clone(),
+            options: self
+                .answers
+                .iter()
+                .map(|answer| answer.text.clone())
+                .collect(),
+            chosen_idx: self.chosen_answer_idx,
+            correct,
+            correct_idx: None,
+        };
+        if !session
+            .questions
+            .iter()
+            .any(|question| question.question_number == item.num)
+        {
+            session.questions.push(QuestionHistory::from(&item));
+        }
+        session.completed_questions = session.questions.len() as u32;
+        session.score = self.score;
+        session.updated_at = time::OffsetDateTime::now_utc().unix_timestamp();
+    }
+
+    fn finish_session(&mut self, score: i64, scores: &[ScoreItem]) {
+        self.ensure_active_session();
+        let Some(mut session) = self.active_session.take() else {
+            return;
+        };
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        session.updated_at = now;
+        session.finished_at = Some(now);
+        session.score = score;
+        session.status = if score >= 60 {
+            SessionStatus::Passed
+        } else {
+            SessionStatus::Failed
+        };
+        session.category_scores = scores.to_vec();
+        session.failure_stage = None;
+        session.failure_message = None;
+        self.sessions.insert(0, session);
+        #[cfg(not(test))]
+        let _ = config::save_sessions(&self.sessions);
+    }
+
+    fn interrupt_session(&mut self, message: &str, stage: &str) {
+        let Some(mut session) = self.active_session.take() else {
+            return;
+        };
+        if session.completed_questions == 0 {
+            return;
+        }
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        session.updated_at = now;
+        session.finished_at = Some(now);
+        session.status = SessionStatus::Interrupted;
+        session.failure_stage = Some(stage.to_string());
+        session.failure_message = Some(redact_error(message));
+        self.sessions.insert(0, session);
+        #[cfg(not(test))]
+        let _ = config::save_sessions(&self.sessions);
+    }
+}
+
+fn redact_error(message: &str) -> String {
+    let lower = message.to_ascii_lowercase();
+    if lower.contains("api key") || lower.contains("token") || lower.contains("cookie") {
+        "请求失败，敏感信息已隐藏".into()
+    } else {
+        message.chars().take(240).collect()
     }
 }
 
@@ -1031,5 +1432,172 @@ fn make_qr(url: &str) -> String {
 impl BiliClient {
     pub fn async_clone(&self) -> Self {
         self.clone_for_async()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_app() -> App {
+        let mut app = App::new(None, None);
+        app.history.clear();
+        app.sessions.clear();
+        app.active_session = None;
+        app.page = Page::Quiz;
+        app.phase = QuizPhase::Captcha(CaptchaState {
+            categories: (1..=4)
+                .map(|id| CategoryItem {
+                    id,
+                    name: format!("分类{id}"),
+                    selected: false,
+                })
+                .collect(),
+            cat_focus: 0,
+            captcha_url: "https://example.com/captcha.jpg".into(),
+            captcha_token: "token".into(),
+            input: String::new(),
+            focus: CaptchaFocus::Categories,
+            error: String::new(),
+        });
+        app
+    }
+
+    #[test]
+    fn captcha_selection_is_limited_to_three() {
+        let mut app = test_app();
+        for index in 0..4 {
+            app.toggle_captcha_category(index);
+        }
+        let QuizPhase::Captcha(state) = &app.phase else {
+            panic!()
+        };
+        assert_eq!(
+            state.categories.iter().filter(|item| item.selected).count(),
+            3
+        );
+        assert!(!state.categories[3].selected);
+    }
+
+    #[test]
+    fn captcha_submission_validates_required_values() {
+        let mut app = test_app();
+        assert_eq!(app.submit_captcha().unwrap_err(), "请选择分类并输入验证码");
+        app.toggle_captcha_category(0);
+        assert_eq!(app.submit_captcha().unwrap_err(), "请输入验证码");
+    }
+
+    #[test]
+    fn leaving_quiz_cancels_background_work() {
+        let mut app = test_app();
+        app.prev_page.push(Page::Home);
+        let token = app.quiz_token.clone();
+        app.back();
+        assert!(token.is_cancelled());
+        assert_eq!(app.page, Page::Home);
+    }
+
+    #[test]
+    fn process_ignores_quiz_events_outside_quiz_page() {
+        let mut app = test_app();
+        app.page = Page::Home;
+        app.process(AppEvent::Fail("ignored".into()));
+        assert!(matches!(app.phase, QuizPhase::Captcha(_)));
+    }
+
+    #[test]
+    fn level_events_keep_contextual_states() {
+        let mut app = test_app();
+        app.process(AppEvent::LevelOk(6));
+        assert!(matches!(
+            app.phase,
+            QuizPhase::LevelVerified { level: 6, .. }
+        ));
+        app.process(AppEvent::LevelFail(5));
+        assert!(matches!(
+            app.phase,
+            QuizPhase::LevelInsufficient { level: 5 }
+        ));
+        app.process(AppEvent::LevelCheckFailed("网络超时".into()));
+        assert!(matches!(app.phase, QuizPhase::LevelCheckFailed(_)));
+    }
+
+    #[tokio::test]
+    async fn login_only_flow_does_not_require_model_configuration() {
+        let mut app = test_app();
+        app.page = Page::Home;
+        app.prev_page.clear();
+        app.auth = None;
+        app.config = None;
+
+        app.enter_login();
+
+        assert_eq!(app.page, Page::Quiz);
+        assert_eq!(app.quiz_intent, QuizIntent::LoginOnly);
+        assert!(matches!(app.phase, QuizPhase::LoggingIn));
+    }
+
+    #[test]
+    fn login_only_level_success_returns_home_without_fetching_questions() {
+        let mut app = test_app();
+        app.page = Page::Quiz;
+        app.prev_page = vec![Page::Home];
+        app.quiz_intent = QuizIntent::LoginOnly;
+        app.phase = QuizPhase::LevelVerified {
+            level: 6,
+            countdown: 1,
+        };
+
+        app.tick();
+
+        assert_eq!(app.page, Page::Home);
+        assert!(!matches!(app.phase, QuizPhase::FetchingQuestion));
+    }
+
+    #[test]
+    fn quiz_done_finalizes_session() {
+        let mut app = test_app();
+        app.config = Some(OpenAiConfig {
+            base_url: "https://example.com".into(),
+            model: "test-model".into(),
+            api_key: "secret".into(),
+            enable_thinking: false,
+            reasoning_effort: "high".into(),
+            enable_fast_mode: false,
+        });
+        app.question_num = 1;
+        app.question_text = "测试题目".into();
+        app.answers = vec![AnswerItem {
+            text: "答案".into(),
+            hash: "hash".into(),
+        }];
+        app.chosen_answer_idx = 1;
+        app.ensure_active_session();
+        app.record_session_question(true);
+        app.process(AppEvent::QuizDone {
+            score: 80,
+            scores: vec![],
+        });
+        assert_eq!(app.sessions[0].status, SessionStatus::Passed);
+        assert_eq!(app.sessions[0].completed_questions, 1);
+        assert!(app.sessions[0].finished_at.is_some());
+    }
+
+    #[test]
+    fn leaving_quiz_records_meaningful_interruption() {
+        let mut app = test_app();
+        app.question_num = 1;
+        app.question_text = "测试题目".into();
+        app.answers = vec![AnswerItem {
+            text: "答案".into(),
+            hash: "hash".into(),
+        }];
+        app.chosen_answer_idx = 1;
+        app.ensure_active_session();
+        app.record_session_question(false);
+        app.prev_page.push(Page::Home);
+        app.back();
+        assert_eq!(app.sessions[0].status, SessionStatus::Interrupted);
+        assert_eq!(app.sessions[0].failure_stage.as_deref(), Some("quiz_exit"));
     }
 }

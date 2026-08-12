@@ -29,39 +29,46 @@ jobs:
             platform: darwin-arm64
             target: aarch64-apple-darwin
             binary: bili-hardcore
+            cargo_args: ""
           # macOS x86_64
           - os: macos-15-intel
             platform: darwin-x64
             target: x86_64-apple-darwin
             binary: bili-hardcore
+            cargo_args: ""
           # Windows x86_64
           - os: windows-latest
             platform: windows-x64
             target: x86_64-pc-windows-msvc
             binary: bili-hardcore.exe
+            cargo_args: ""
           # Linux x86_64 - MUSL (recommended, static linking)
           - os: ubuntu-latest
             platform: linux-x64-musl
             target: x86_64-unknown-linux-musl
             binary: bili-hardcore
             use_cross: true
+            cargo_args: "--no-default-features"
           # Linux x86_64 - GLIBC
           - os: ubuntu-latest
             platform: linux-x64
             target: x86_64-unknown-linux-gnu
             binary: bili-hardcore
+            cargo_args: ""
           # Linux ARM64 - MUSL (recommended)
           - os: ubuntu-latest
             platform: linux-arm64-musl
             target: aarch64-unknown-linux-musl
             binary: bili-hardcore
             use_cross: true
+            cargo_args: "--no-default-features"
           # Linux ARM64 - GLIBC
           - os: ubuntu-latest
             platform: linux-arm64
             target: aarch64-unknown-linux-gnu
             binary: bili-hardcore
             use_cross: true
+            cargo_args: ""
 
     steps:
       - name: Checkout
@@ -88,13 +95,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
+      - name: Install Linux GUI dependencies
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libx11-dev
+
       - name: Build with cross
         if: matrix.use_cross == true
-        run: cross build --release --target ${{ matrix.target }}
+        run: cross build --release --target ${{ matrix.target }} ${{ matrix.cargo_args }}
 
       - name: Build with cargo
         if: matrix.use_cross != true
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} ${{ matrix.cargo_args }}
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
@@ -193,7 +206,7 @@ jobs:
             cd ../..
           fi
 
-          # Linux x64 - MUSL
+          # Linux x64 - MUSL (TUI compatibility build)
           if [ -f "artifacts/bili-hardcore-linux-x64-musl/bili-hardcore" ]; then
             tar -czf release-assets/bili-hardcore-${VERSION}-linux-x64-musl.tar.gz \
               -C artifacts/bili-hardcore-linux-x64-musl bili-hardcore
@@ -205,7 +218,7 @@ jobs:
               -C artifacts/bili-hardcore-linux-x64 bili-hardcore
           fi
 
-          # Linux ARM64 - MUSL
+          # Linux ARM64 - MUSL (TUI compatibility build)
           if [ -f "artifacts/bili-hardcore-linux-arm64-musl/bili-hardcore" ]; then
             tar -czf release-assets/bili-hardcore-${VERSION}-linux-arm64-musl.tar.gz \
               -C artifacts/bili-hardcore-linux-arm64-musl bili-hardcore
@@ -288,7 +301,7 @@ jobs:
 
             ## 💡 提示
 
-            - **Linux 用户建议优先使用 `-musl` 版本**（静态链接，无系统库依赖，兼容所有发行版）
+            - **Linux GUI 用户请选择 glibc 版本**；`-musl` 为无图形环境准备，仅包含 TUI
             - **macOS 提示**: 如遇 "无法验证开发者"，执行：`xattr -cr ~/.local/bin/bili-hardcore`
             - 解压后赋予执行权限：`chmod +x bili-hardcore`
           files: release-assets/*
