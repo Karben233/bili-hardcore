@@ -30,5 +30,13 @@
             "base_url": "https://api.openai.com/v1/chat/completions",
             "model": "gpt-5.4-nano"
         }
+    },
+    {
+        "provider": "grok",
+        "provider_name": "Grok (xAI)",
+        "config": {
+            "base_url": "https://api.x.ai/v1/chat/completions",
+            "model": "grok-4.6"
+        }
     }
 ]

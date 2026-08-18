@@ -139,6 +139,7 @@ name = "bili-hardcore"
 version = "1.0.8"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap",
  "crossterm",
  "dirs",
