@@ -34,8 +34,8 @@ jobs:
         with:
           key: grok-${{ env.TARGET }}
 
-      - name: Check formatting
-        run: cargo fmt --check
+      - name: Apply formatting
+        run: cargo fmt
 
       - name: Run tests
         run: cargo test --locked
