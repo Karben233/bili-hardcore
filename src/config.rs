@@ -213,3 +213,33 @@ pub fn build_quiz_prompt(categories: &[String], question: &str, enable_thinking:
         format!("{}\n---\n不要思考，直接回答我的问题：{}", base, question)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn presets_json_parses() {
+        let presets: Vec<PresetTemplate> =
+            serde_json::from_str(PRESETS_JSON).expect("presets.json should parse");
+        assert!(!presets.is_empty());
+    }
+
+    #[test]
+    fn grok_preset_is_unique_and_valid() {
+        let presets = load_presets();
+        let grok_presets: Vec<_> = presets
+            .iter()
+            .filter(|preset| preset.provider == "grok")
+            .collect();
+
+        assert_eq!(grok_presets.len(), 1);
+        let grok = grok_presets[0];
+        assert_eq!(grok.provider_name, "Grok (xAI)");
+        assert_eq!(
+            grok.config.base_url,
+            "https://api.x.ai/v1/chat/completions"
+        );
+        assert!(!grok.config.model.trim().is_empty());
+    }
+}

@@ -22,6 +22,65 @@ pub struct OpenAiClient {
     reasoning_effort: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ApiDialect {
+    OpenAi,
+    XAi,
+    Extended,
+}
+
+fn api_dialect(base_url: &str) -> ApiDialect {
+    let Ok(url) = reqwest::Url::parse(base_url) else {
+        return ApiDialect::Extended;
+    };
+
+    match url.host_str() {
+        Some("api.openai.com") => ApiDialect::OpenAi,
+        Some("api.x.ai") => ApiDialect::XAi,
+        _ => ApiDialect::Extended,
+    }
+}
+
+fn build_request_body(
+    dialect: ApiDialect,
+    model: &str,
+    prompt: &str,
+    enable_thinking: bool,
+    reasoning_effort: &str,
+) -> serde_json::Value {
+    let mut body = serde_json::json!({
+        "model": model,
+        "stream": true,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    });
+    let effort = if enable_thinking {
+        reasoning_effort
+    } else {
+        "none"
+    };
+
+    match dialect {
+        ApiDialect::OpenAi => {
+            body["reasoning_effort"] = serde_json::json!(effort);
+        }
+        ApiDialect::XAi => {}
+        ApiDialect::Extended => {
+            body["enable_thinking"] = serde_json::json!(enable_thinking);
+            body["thinking"] = serde_json::json!({
+                "type": if enable_thinking { "enabled" } else { "disabled" }
+            });
+            body["reasoning_effort"] = serde_json::json!(effort);
+        }
+    }
+
+    body
+}
+
 impl OpenAiClient {
     pub fn new(config: &OpenAiConfig) -> Self {
         let http = Client::builder().build().expect("创建 HTTP 客户端失败");
@@ -50,33 +109,13 @@ impl OpenAiClient {
     ) {
         let prompt = build_quiz_prompt(&categories, question, self.enable_thinking);
 
-        let mut body = serde_json::json!({
-            "model": self.model,
-            "stream": true,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        });
-
-        let is_openai = self.base_url.contains("api.openai.com");
-        let effort = if self.enable_thinking {
-            self.reasoning_effort.clone()
-        } else {
-            "none".to_string()
-        };
-
-        if is_openai {
-            body["reasoning_effort"] = serde_json::json!(effort);
-        } else {
-            body["enable_thinking"] = serde_json::json!(self.enable_thinking);
-            body["thinking"] = serde_json::json!({
-                "type": if self.enable_thinking { "enabled" } else { "disabled" }
-            });
-            body["reasoning_effort"] = serde_json::json!(effort);
-        }
+        let body = build_request_body(
+            api_dialect(&self.base_url),
+            &self.model,
+            &prompt,
+            self.enable_thinking,
+            &self.reasoning_effort,
+        );
 
         let url = self.base_url.clone();
         let http = self.http.clone();
@@ -152,5 +191,87 @@ impl OpenAiClient {
                 let _ = tx.send(LlmChunk::Done(full_content));
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_api_dialect_by_exact_host() {
+        assert_eq!(
+            api_dialect("https://api.openai.com/v1/chat/completions"),
+            ApiDialect::OpenAi
+        );
+        assert_eq!(
+            api_dialect("https://API.OPENAI.COM:443/v1/chat/completions"),
+            ApiDialect::OpenAi
+        );
+        assert_eq!(
+            api_dialect("https://api.x.ai/v1/chat/completions"),
+            ApiDialect::XAi
+        );
+        assert_eq!(
+            api_dialect("https://API.X.AI:443/v1/chat/completions"),
+            ApiDialect::XAi
+        );
+        assert_eq!(
+            api_dialect("https://api.openai.com.example/v1/chat/completions"),
+            ApiDialect::Extended
+        );
+        assert_eq!(
+            api_dialect("https://api.x.ai.example/v1/chat/completions"),
+            ApiDialect::Extended
+        );
+        assert_eq!(api_dialect("not a url"), ApiDialect::Extended);
+    }
+
+    #[test]
+    fn openai_body_only_adds_reasoning_effort() {
+        let body = build_request_body(
+            ApiDialect::OpenAi,
+            "gpt-test",
+            "question",
+            true,
+            "high",
+        );
+
+        assert_eq!(body["model"], "gpt-test");
+        assert_eq!(body["stream"], true);
+        assert_eq!(body["messages"][0]["content"], "question");
+        assert_eq!(body["reasoning_effort"], "high");
+        assert!(body.get("enable_thinking").is_none());
+        assert!(body.get("thinking").is_none());
+    }
+
+    #[test]
+    fn xai_body_omits_all_thinking_fields() {
+        let body = build_request_body(ApiDialect::XAi, "grok-test", "question", true, "max");
+
+        assert_eq!(body["model"], "grok-test");
+        assert_eq!(body["stream"], true);
+        assert_eq!(body["messages"][0]["content"], "question");
+        assert!(body.get("enable_thinking").is_none());
+        assert!(body.get("thinking").is_none());
+        assert!(body.get("reasoning_effort").is_none());
+    }
+
+    #[test]
+    fn extended_body_keeps_existing_thinking_fields() {
+        let body = build_request_body(
+            ApiDialect::Extended,
+            "extended-test",
+            "question",
+            false,
+            "max",
+        );
+
+        assert_eq!(body["model"], "extended-test");
+        assert_eq!(body["stream"], true);
+        assert_eq!(body["messages"][0]["content"], "question");
+        assert_eq!(body["enable_thinking"], false);
+        assert_eq!(body["thinking"]["type"], "disabled");
+        assert_eq!(body["reasoning_effort"], "none");
     }
 }
