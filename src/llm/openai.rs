@@ -379,7 +379,8 @@ impl OpenAiClient {
                 ResponseFormat::Sse => {
                     let first =
                         stream::once(async move { Ok::<_, reqwest::Error>(first_chunk) });
-                    let mut events = first.chain(resp.bytes_stream()).eventsource();
+                    let events = first.chain(resp.bytes_stream()).eventsource();
+                    futures::pin_mut!(events);
                     while let Some(event) = events.next().await {
                         if token.is_cancelled() {
                             return;
