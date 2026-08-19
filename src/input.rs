@@ -1,4 +1,5 @@
 use crate::app::*;
+use crate::config;
 use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::app::CaptchaFocus;
@@ -52,12 +53,7 @@ impl App {
                         .min(presets.len().saturating_sub(1));
                 }
                 KeyCode::Enter => {
-                    if let Some(preset) = presets.get(self.cfg_preset_sel) {
-                        self.cfg_fields[0] = preset.config.base_url.clone();
-                        self.cfg_fields[1] = preset.config.model.clone();
-                        self.cfg_cursors[0] = self.cfg_fields[0].len();
-                        self.cfg_cursors[1] = self.cfg_fields[1].len();
-                    }
+                    self.apply_preset(self.cfg_preset_sel);
                     self.cfg_preset_open = false;
                 }
                 KeyCode::Esc => {
