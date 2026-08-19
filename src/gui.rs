@@ -2592,6 +2592,10 @@ fn phase_label(phase: &QuizPhase) -> &'static str {
 }
 
 fn question_panel(ui: &mut egui::Ui, app: &App) {
+    // The panel is placed in a fixed-width column. Keep its children at that
+    // width so short/empty streaming text cannot make the layout jump.
+    let panel_width = ui.available_width();
+    ui.set_width(panel_width);
     ui.set_min_height(ui.available_height().max(420.0));
     ui.label(
         RichText::new(format!("第 {} 题", app.question_num))
@@ -2697,11 +2701,12 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
         }
         _ => {}
     }
-    if !app.thinking_text.is_empty() {
+    if !app.thinking_text.is_empty() || matches!(app.phase, QuizPhase::WaitingLlm) {
         ui.add_space(14.0);
         surface()
             .inner_margin(egui::Margin::same(16))
             .show(ui, |ui| {
+                ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("●").size(11.0).color(ACCENT));
                     ui.label(
@@ -2718,8 +2723,18 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
                 egui::ScrollArea::vertical()
                     .stick_to_bottom(true)
                     .max_height(120.0)
+                    .auto_shrink([false, false])
                     .show(ui, |ui| {
-                        ui.label(RichText::new(&app.thinking_text).size(13.0).color(TEXT));
+                        ui.set_width(ui.available_width());
+                        if app.thinking_text.is_empty() {
+                            ui.label(
+                                RichText::new("等待模型返回分析摘要…")
+                                    .size(13.0)
+                                    .color(SUBTLE),
+                            );
+                        } else {
+                            ui.label(RichText::new(&app.thinking_text).size(13.0).color(TEXT));
+                        }
                     });
             });
     }
