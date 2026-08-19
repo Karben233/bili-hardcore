@@ -236,10 +236,7 @@ mod tests {
         assert_eq!(grok_presets.len(), 1);
         let grok = grok_presets[0];
         assert_eq!(grok.provider_name, "Grok (xAI)");
-        assert_eq!(
-            grok.config.base_url,
-            "https://api.x.ai/v1/chat/completions"
-        );
+        assert_eq!(grok.config.base_url, "https://api.x.ai/v1/chat/completions");
         assert!(!grok.config.model.trim().is_empty());
     }
 }

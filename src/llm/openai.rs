@@ -92,8 +92,9 @@ fn xai_reasoning_effort(enable_thinking: bool, saved_effort: &str) -> &'static s
         effort if effort.eq_ignore_ascii_case("low") => "low",
         effort if effort.eq_ignore_ascii_case("medium") => "medium",
         effort if effort.eq_ignore_ascii_case("high") => "high",
-        effort if effort.eq_ignore_ascii_case("max")
-            || effort.eq_ignore_ascii_case("xhigh") => "xhigh",
+        effort if effort.eq_ignore_ascii_case("max") || effort.eq_ignore_ascii_case("xhigh") => {
+            "xhigh"
+        }
         // 配置文件可能被手动编辑；未知值回退到兼容性最好的 high。
         _ => "high",
     }
@@ -130,10 +131,8 @@ fn build_request_body(
         ApiDialect::XAi => {
             // xAI 已弃用 max_tokens；该字段限制可见正文，推理开销由 effort 控制。
             body["max_completion_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
-            body["reasoning_effort"] = serde_json::json!(xai_reasoning_effort(
-                enable_thinking,
-                reasoning_effort,
-            ));
+            body["reasoning_effort"] =
+                serde_json::json!(xai_reasoning_effort(enable_thinking, reasoning_effort,));
         }
         ApiDialect::Extended => {
             body["max_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
@@ -250,8 +249,7 @@ fn unrecognized_format_error(
 ) -> String {
     let unsupported_encoding = has_unsupported_content_encoding(content_encoding);
     let content_type = single_line_preview(content_type.unwrap_or("<缺失>"), api_key, 100);
-    let content_encoding =
-        single_line_preview(content_encoding.unwrap_or("<缺失>"), api_key, 100);
+    let content_encoding = single_line_preview(content_encoding.unwrap_or("<缺失>"), api_key, 100);
     let preview = single_line_preview(&String::from_utf8_lossy(prefix), api_key, 200);
     let stop = match stop {
         SniffStop::Mismatch => "正文前缀不匹配 JSON/SSE",
@@ -387,7 +385,10 @@ fn redact_urls(message: &str) -> String {
         let url_end = rest[start..]
             .find(|character: char| {
                 character.is_whitespace()
-                    || matches!(character, '"' | '\'' | '`' | ')' | ']' | '}' | ';' | '<' | '>')
+                    || matches!(
+                        character,
+                        '"' | '\'' | '`' | ')' | ']' | '}' | ';' | '<' | '>'
+                    )
             })
             .unwrap_or(rest.len() - start);
         output.push_str("[URL REDACTED]");
@@ -479,7 +480,9 @@ fn format_event_stream_error(
 
 fn send_error(tx: &mpsc::UnboundedSender<LlmChunk>, api_key: &str, message: impl AsRef<str>) {
     let message = message.as_ref();
-    let _ = tx.send(LlmChunk::Error(redact_urls(&redact_secrets(message, api_key))));
+    let _ = tx.send(LlmChunk::Error(redact_urls(&redact_secrets(
+        message, api_key,
+    ))));
 }
 
 impl OpenAiClient {
@@ -680,7 +683,8 @@ impl OpenAiClient {
                     let value: serde_json::Value = match serde_json::from_slice(&bytes) {
                         Ok(value) => value,
                         Err(error) => {
-                            let preview = safe_preview(&String::from_utf8_lossy(&bytes), &api_key, 200);
+                            let preview =
+                                safe_preview(&String::from_utf8_lossy(&bytes), &api_key, 200);
                             send_error(
                                 &tx,
                                 &api_key,
@@ -783,7 +787,10 @@ mod tests {
             ApiDialect::XAi
         );
         assert_eq!(
-            api_dialect("https://api.x.ai.example/v1/chat/completions", "other-model"),
+            api_dialect(
+                "https://api.x.ai.example/v1/chat/completions",
+                "other-model"
+            ),
             ApiDialect::Extended
         );
         assert_eq!(
@@ -817,15 +824,11 @@ mod tests {
     fn existing_dialects_keep_their_reasoning_fields_and_output_limit() {
         let openai = build_request_body(ApiDialect::OpenAi, "gpt-test", "question", true, "high");
         assert_eq!(openai["reasoning_effort"], "high");
-        assert_eq!(
-            openai["max_completion_tokens"],
-            MAX_VISIBLE_OUTPUT_TOKENS
-        );
+        assert_eq!(openai["max_completion_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
         assert!(openai.get("max_tokens").is_none());
         assert!(openai.get("enable_thinking").is_none());
 
-        let extended =
-            build_request_body(ApiDialect::Extended, "other", "question", false, "max");
+        let extended = build_request_body(ApiDialect::Extended, "other", "question", false, "max");
         assert_eq!(extended["enable_thinking"], false);
         assert_eq!(extended["thinking"]["type"], "disabled");
         assert_eq!(extended["reasoning_effort"], "none");
@@ -1030,8 +1033,7 @@ mod tests {
     #[test]
     fn redacts_keys_urls_and_truncates_unicode_safely() {
         let key = "secret-test-key";
-        let message =
-            "错误：Bearer secret-test-key；密钥 secret-test-key；访问 https://api.example.test/v1?key=secret-test-key 中文内容";
+        let message = "错误：Bearer secret-test-key；密钥 secret-test-key；访问 https://api.example.test/v1?key=secret-test-key 中文内容";
         let preview = safe_preview(message, key, 200);
         assert!(!preview.contains(key));
         assert!(!preview.contains("https://api.example.test"));
