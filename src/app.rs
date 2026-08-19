@@ -666,8 +666,10 @@ impl App {
                             return;
                         }
                         LlmChunk::Error(msg) => {
-                            tracing::warn!("LLM 请求失败，将重试: {}", msg);
-                            let _ = tx.send(AppEvent::LlmRetry { reason: msg });
+                            // 请求可能已到达上游并继续计费；传输/API 失败不得自动重试，
+                            // 否则会叠加多个长任务并耗尽中转并发槽。
+                            tracing::warn!("LLM 请求失败，停止自动重试: {}", msg);
+                            let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Error(msg)));
                             return;
                         }
                     }
@@ -922,9 +924,9 @@ impl App {
                     }
                 },
                 LlmChunk::Error(msg) => {
-                    // 兜底：正常情况下 spawn_llm 内部已将 LlmChunk::Error 转为
-                    // AppEvent::LlmRetry，这里只在异常路径触发时同样走重试汇聚。
-                    let _ = self.tx.send(AppEvent::LlmRetry { reason: msg });
+                    self.phase = QuizPhase::Error(format!(
+                        "AI 请求失败: {msg}（为避免重复计费，未自动重试）"
+                    ));
                 }
             },
             AppEvent::LlmRetry { reason } => {

@@ -136,7 +136,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     let toggle_text = if app.cfg_thinking {
         "[✓] 开启 - 准确率高，速度慢"
     } else {
-        "[ ] 关闭 - 准确率低，速度快"
+        "[ ] 关闭/最低 - 速度优先（部分模型仍会低度推理）"
     };
     let toggle_color = if thinking_focused {
         Color::White
