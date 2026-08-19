@@ -5,11 +5,16 @@ use reqwest::{
     Client,
     header::{CONTENT_ENCODING, CONTENT_TYPE},
 };
+use std::{error::Error as StdError, time::Duration};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 const MAX_JSON_RESPONSE_SIZE: usize = 8 * 1024 * 1024;
 const MAX_RESPONSE_SNIFF_SIZE: usize = 8 * 1024;
+const MAX_VISIBLE_OUTPUT_TOKENS: u64 = 128;
+const HTTP_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+const HTTP_READ_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+const HTTP_TOTAL_TIMEOUT: Duration = Duration::from_secs(35 * 60);
 const UTF8_BOM: &[u8] = b"\xef\xbb\xbf";
 const SSE_PREFIXES: [&[u8]; 4] = [b"data:", b"event:", b"id:", b"retry:"];
 
@@ -71,8 +76,26 @@ fn api_dialect(base_url: &str, model: &str) -> ApiDialect {
     match host.as_deref() {
         Some("api.openai.com") => ApiDialect::OpenAi,
         Some("api.x.ai") => ApiDialect::XAi,
+        // 自定义 Grok 中转仍使用 xAI-compatible Chat Completions 参数。
         _ if model.trim().to_ascii_lowercase().starts_with("grok-") => ApiDialect::XAi,
         _ => ApiDialect::Extended,
+    }
+}
+
+fn xai_reasoning_effort(enable_thinking: bool, saved_effort: &str) -> &'static str {
+    if !enable_thinking {
+        // 当前 Grok 推理模型仍会推理，low 是可用的最低档位。
+        return "low";
+    }
+
+    match saved_effort.trim() {
+        effort if effort.eq_ignore_ascii_case("low") => "low",
+        effort if effort.eq_ignore_ascii_case("medium") => "medium",
+        effort if effort.eq_ignore_ascii_case("high") => "high",
+        effort if effort.eq_ignore_ascii_case("max")
+            || effort.eq_ignore_ascii_case("xhigh") => "xhigh",
+        // 配置文件可能被手动编辑；未知值回退到兼容性最好的 high。
+        _ => "high",
     }
 }
 
@@ -101,10 +124,19 @@ fn build_request_body(
 
     match dialect {
         ApiDialect::OpenAi => {
+            body["max_completion_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
             body["reasoning_effort"] = serde_json::json!(effort);
         }
-        ApiDialect::XAi => {}
+        ApiDialect::XAi => {
+            // xAI 已弃用 max_tokens；该字段限制可见正文，推理开销由 effort 控制。
+            body["max_completion_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
+            body["reasoning_effort"] = serde_json::json!(xai_reasoning_effort(
+                enable_thinking,
+                reasoning_effort,
+            ));
+        }
         ApiDialect::Extended => {
+            body["max_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
             body["enable_thinking"] = serde_json::json!(enable_thinking);
             body["thinking"] = serde_json::json!({
                 "type": if enable_thinking { "enabled" } else { "disabled" }
@@ -337,8 +369,35 @@ fn redact_secrets(message: &str, api_key: &str) -> String {
         .replace(api_key, "[REDACTED]")
 }
 
+fn redact_urls(message: &str) -> String {
+    let mut output = String::with_capacity(message.len());
+    let mut rest = message;
+    loop {
+        let start = match (rest.find("http://"), rest.find("https://")) {
+            (Some(http), Some(https)) => Some(http.min(https)),
+            (Some(http), None) => Some(http),
+            (None, Some(https)) => Some(https),
+            (None, None) => None,
+        };
+        let Some(start) = start else {
+            output.push_str(rest);
+            break;
+        };
+        output.push_str(&rest[..start]);
+        let url_end = rest[start..]
+            .find(|character: char| {
+                character.is_whitespace()
+                    || matches!(character, '"' | '\'' | '`' | ')' | ']' | '}' | ';' | '<' | '>')
+            })
+            .unwrap_or(rest.len() - start);
+        output.push_str("[URL REDACTED]");
+        rest = &rest[start + url_end..];
+    }
+    output
+}
+
 fn safe_preview(message: &str, api_key: &str, max_chars: usize) -> String {
-    let redacted = redact_secrets(message, api_key);
+    let redacted = redact_urls(&redact_secrets(message, api_key));
     let mut preview: String = redacted.chars().take(max_chars).collect();
     if redacted.chars().count() > max_chars {
         preview.push('…');
@@ -346,13 +405,91 @@ fn safe_preview(message: &str, api_key: &str, max_chars: usize) -> String {
     preview
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReqwestErrorClass {
+    Timeout,
+    Connect,
+    Request,
+    ResponseBody,
+    Decode,
+    Other,
+}
+
+impl ReqwestErrorClass {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Timeout => "超时",
+            Self::Connect => "连接",
+            Self::Request => "请求构造/发送",
+            Self::ResponseBody => "响应体",
+            Self::Decode => "响应解码",
+            Self::Other => "其他",
+        }
+    }
+}
+
+fn classify_reqwest_error(error: &reqwest::Error) -> ReqwestErrorClass {
+    if error.is_timeout() {
+        ReqwestErrorClass::Timeout
+    } else if error.is_connect() {
+        ReqwestErrorClass::Connect
+    } else if error.is_builder() || error.is_request() {
+        ReqwestErrorClass::Request
+    } else if error.is_decode() {
+        ReqwestErrorClass::Decode
+    } else if error.is_body() {
+        ReqwestErrorClass::ResponseBody
+    } else {
+        ReqwestErrorClass::Other
+    }
+}
+
+fn safe_error_chain(error: &dyn StdError, api_key: &str) -> String {
+    let mut details = vec![redact_urls(&redact_secrets(&error.to_string(), api_key))];
+    let mut current = error.source();
+    while let Some(error) = current {
+        details.push(redact_urls(&redact_secrets(&error.to_string(), api_key)));
+        current = error.source();
+    }
+    details.join(" -> ")
+}
+
+fn format_reqwest_error(context: &str, error: &reqwest::Error, api_key: &str) -> String {
+    format!(
+        "{context} [{}]: {}",
+        classify_reqwest_error(error).label(),
+        safe_error_chain(error, api_key)
+    )
+}
+
+fn format_event_stream_error(
+    error: &eventsource_stream::EventStreamError<reqwest::Error>,
+    api_key: &str,
+) -> String {
+    match error {
+        eventsource_stream::EventStreamError::Transport(error) => {
+            format_reqwest_error("读取 LLM SSE 响应失败", error, api_key)
+        }
+        _ => format!(
+            "读取 LLM SSE 响应失败 [响应解码]: {}",
+            safe_error_chain(error, api_key)
+        ),
+    }
+}
+
 fn send_error(tx: &mpsc::UnboundedSender<LlmChunk>, api_key: &str, message: impl AsRef<str>) {
-    let _ = tx.send(LlmChunk::Error(redact_secrets(message.as_ref(), api_key)));
+    let message = message.as_ref();
+    let _ = tx.send(LlmChunk::Error(redact_urls(&redact_secrets(message, api_key))));
 }
 
 impl OpenAiClient {
     pub fn new(config: &OpenAiConfig) -> Self {
-        let http = Client::builder().build().expect("创建 HTTP 客户端失败");
+        let http = Client::builder()
+            .connect_timeout(HTTP_CONNECT_TIMEOUT)
+            .read_timeout(HTTP_READ_TIMEOUT)
+            .timeout(HTTP_TOTAL_TIMEOUT)
+            .build()
+            .expect("创建 HTTP 客户端失败");
         // 兜底：配置文件手动编辑导致空值时回退到默认 high
         let reasoning_effort = if config.reasoning_effort.is_empty() {
             "high".to_string()
@@ -393,29 +530,44 @@ impl OpenAiClient {
             if token.is_cancelled() {
                 return;
             }
-            let mut resp = match http
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {api_key}"))
-                .json(&body)
-                .timeout(std::time::Duration::from_secs(120))
-                .send()
-                .await
-            {
-                Ok(response) => response,
-                Err(error) => {
-                    send_error(
-                        &tx,
-                        &api_key,
-                        format!("LLM 请求失败: {}", error.without_url()),
-                    );
-                    return;
-                }
+            let mut resp = tokio::select! {
+                biased;
+                _ = token.cancelled() => return,
+                result = http
+                    .post(&url)
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", format!("Bearer {api_key}"))
+                    .json(&body)
+                    .send() => match result {
+                        Ok(response) => response,
+                        Err(error) => {
+                            send_error(
+                                &tx,
+                                &api_key,
+                                format_reqwest_error("LLM 请求失败", &error, &api_key),
+                            );
+                            return;
+                        }
+                    }
             };
 
             let status = resp.status();
             if !status.is_success() {
-                let body_text = resp.text().await.unwrap_or_default();
+                let body_text = tokio::select! {
+                    biased;
+                    _ = token.cancelled() => return,
+                    result = resp.text() => match result {
+                        Ok(body_text) => body_text,
+                        Err(error) => {
+                            send_error(
+                                &tx,
+                                &api_key,
+                                format_reqwest_error("读取 LLM 错误响应失败", &error, &api_key),
+                            );
+                            return;
+                        }
+                    }
+                };
                 let preview = safe_preview(&body_text, &api_key, 300);
                 send_error(
                     &tx,
@@ -447,7 +599,12 @@ impl OpenAiClient {
                     PrefixDecision::NeedMore => {}
                 }
 
-                match resp.chunk().await {
+                let chunk = tokio::select! {
+                    biased;
+                    _ = token.cancelled() => return,
+                    result = resp.chunk() => result,
+                };
+                match chunk {
                     Ok(Some(chunk)) => {
                         let remaining = MAX_RESPONSE_SNIFF_SIZE - sniff_prefix.len();
                         let inspected = remaining.min(chunk.len());
@@ -459,7 +616,7 @@ impl OpenAiClient {
                         send_error(
                             &tx,
                             &api_key,
-                            format!("读取 LLM 响应失败: {}", error.without_url()),
+                            format_reqwest_error("读取 LLM 响应失败", &error, &api_key),
                         );
                         return;
                     }
@@ -498,14 +655,23 @@ impl OpenAiClient {
                             send_error(&tx, &api_key, "LLM JSON 响应超过 8 MiB 限制");
                             return;
                         }
-                        match resp.chunk().await {
+                        let chunk = tokio::select! {
+                            biased;
+                            _ = token.cancelled() => return,
+                            result = resp.chunk() => result,
+                        };
+                        match chunk {
                             Ok(Some(chunk)) => bytes.extend_from_slice(&chunk),
                             Ok(None) => break,
                             Err(error) => {
                                 send_error(
                                     &tx,
                                     &api_key,
-                                    format!("读取 LLM JSON 响应失败: {}", error.without_url()),
+                                    format_reqwest_error(
+                                        "读取 LLM JSON 响应失败",
+                                        &error,
+                                        &api_key,
+                                    ),
                                 );
                                 return;
                             }
@@ -540,14 +706,23 @@ impl OpenAiClient {
                         stream::iter(buffered_chunks.into_iter().map(Ok::<_, reqwest::Error>));
                     let events = replay.chain(resp.bytes_stream()).eventsource();
                     futures::pin_mut!(events);
-                    while let Some(event) = events.next().await {
-                        if token.is_cancelled() {
-                            return;
-                        }
+                    loop {
+                        let event = tokio::select! {
+                            biased;
+                            _ = token.cancelled() => return,
+                            event = events.next() => event,
+                        };
+                        let Some(event) = event else {
+                            break;
+                        };
                         let event = match event {
                             Ok(event) => event,
                             Err(error) => {
-                                send_error(&tx, &api_key, format!("解析 LLM SSE 响应失败: {error}"));
+                                send_error(
+                                    &tx,
+                                    &api_key,
+                                    format_event_stream_error(&error, &api_key),
+                                );
                                 return;
                             }
                         };
@@ -618,19 +793,35 @@ mod tests {
     }
 
     #[test]
-    fn xai_proxy_body_preserves_model_and_omits_thinking_fields() {
-        let body = build_request_body(ApiDialect::XAi, "grok-4.6", "question", true, "high");
-        assert_eq!(body["model"], "grok-4.6");
-        assert_eq!(body["stream"], true);
-        assert!(body.get("enable_thinking").is_none());
-        assert!(body.get("thinking").is_none());
-        assert!(body.get("reasoning_effort").is_none());
+    fn xai_body_maps_reasoning_effort_and_limits_completion() {
+        for (saved, expected) in [
+            ("low", "low"),
+            ("medium", "medium"),
+            ("high", "high"),
+            ("max", "xhigh"),
+            ("xhigh", "xhigh"),
+            ("edited-value", "high"),
+        ] {
+            let body = build_request_body(ApiDialect::XAi, "grok-4.6", "question", true, saved);
+            assert_eq!(body["reasoning_effort"], expected);
+            assert_eq!(body["max_completion_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
+        }
+
+        let disabled = build_request_body(ApiDialect::XAi, "grok-4.6", "question", false, "max");
+        assert_eq!(disabled["reasoning_effort"], "low");
+        assert!(disabled.get("enable_thinking").is_none());
+        assert!(disabled.get("thinking").is_none());
     }
 
     #[test]
-    fn existing_dialects_keep_their_request_fields() {
+    fn existing_dialects_keep_their_reasoning_fields_and_output_limit() {
         let openai = build_request_body(ApiDialect::OpenAi, "gpt-test", "question", true, "high");
         assert_eq!(openai["reasoning_effort"], "high");
+        assert_eq!(
+            openai["max_completion_tokens"],
+            MAX_VISIBLE_OUTPUT_TOKENS
+        );
+        assert!(openai.get("max_tokens").is_none());
         assert!(openai.get("enable_thinking").is_none());
 
         let extended =
@@ -638,6 +829,8 @@ mod tests {
         assert_eq!(extended["enable_thinking"], false);
         assert_eq!(extended["thinking"]["type"], "disabled");
         assert_eq!(extended["reasoning_effort"], "none");
+        assert_eq!(extended["max_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
+        assert!(extended.get("max_completion_tokens").is_none());
     }
 
     #[test]
@@ -835,11 +1028,17 @@ mod tests {
     }
 
     #[test]
-    fn redacts_keys_and_truncates_unicode_safely() {
+    fn redacts_keys_urls_and_truncates_unicode_safely() {
         let key = "secret-test-key";
-        let message = "错误：Bearer secret-test-key；密钥 secret-test-key；中文内容";
-        let preview = safe_preview(message, key, 24);
+        let message =
+            "错误：Bearer secret-test-key；密钥 secret-test-key；访问 https://api.example.test/v1?key=secret-test-key 中文内容";
+        let preview = safe_preview(message, key, 200);
         assert!(!preview.contains(key));
+        assert!(!preview.contains("https://api.example.test"));
         assert!(preview.contains("[REDACTED]"));
+        assert!(preview.contains("[URL REDACTED]"));
+
+        let truncated = safe_preview("错误：中文内容", key, 4);
+        assert_eq!(truncated, "错误：中…");
     }
 }
