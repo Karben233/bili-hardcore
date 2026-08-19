@@ -2,8 +2,6 @@ use crate::app::*;
 use crate::config::{self, OpenAiConfig};
 use crossterm::event::{KeyCode, KeyModifiers};
 
-const PRESET_COUNT: usize = 4; // must match presets.json length
-
 use crate::app::CaptchaFocus;
 
 impl App {
@@ -43,15 +41,18 @@ impl App {
     fn key_config(&mut self, code: KeyCode) {
         // Handle preset selection overlay when active
         if self.cfg_preset_open {
+            let presets = config::load_presets();
             match code {
                 KeyCode::Up => {
                     self.cfg_preset_sel = self.cfg_preset_sel.saturating_sub(1);
                 }
                 KeyCode::Down => {
-                    self.cfg_preset_sel = (self.cfg_preset_sel + 1).min(PRESET_COUNT - 1);
+                    self.cfg_preset_sel = self
+                        .cfg_preset_sel
+                        .saturating_add(1)
+                        .min(presets.len().saturating_sub(1));
                 }
                 KeyCode::Enter => {
-                    let presets = config::load_presets();
                     if let Some(preset) = presets.get(self.cfg_preset_sel) {
                         self.cfg_fields[0] = preset.config.base_url.clone();
                         self.cfg_fields[1] = preset.config.model.clone();

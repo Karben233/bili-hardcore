@@ -330,8 +330,15 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             // Phase-specific status line (always visible)
             match &app.phase {
                 QuizPhase::WaitingLlm => {
+                    let status = if !app.answer_text.is_empty() {
+                        "AI 回答中..."
+                    } else if !app.thinking_text.is_empty() {
+                        "AI 思考中..."
+                    } else {
+                        "正在等待 LLM 响应..."
+                    };
                     lines.push(Line::from(Span::styled(
-                        format!("{} AI 思考中...", app.spin_char()),
+                        format!("{} {status}", app.spin_char()),
                         Style::default().fg(Color::Cyan),
                     )));
                 }
