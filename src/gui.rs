@@ -263,14 +263,12 @@ impl GuiApp {
                         } else {
                             "点击配置模型"
                         };
-                        if ui
+                        if ready {
+                            ui.label(icon_text(Icon::CircleCheck, label, 12.0, color));
+                        } else if ui
                             .add(
                                 egui::Button::new(icon_text(
-                                    if ready {
-                                        Icon::CircleCheck
-                                    } else {
-                                        Icon::CircleAlert
-                                    },
+                                    Icon::CircleAlert,
                                     label,
                                     12.0,
                                     color,
@@ -862,6 +860,7 @@ impl GuiApp {
             .fill(SURFACE)
             .stroke(Stroke::new(1.0, BORDER))
             .inner_margin(egui::Margin::symmetric(24, 12))
+            .corner_radius(12)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
@@ -874,11 +873,23 @@ impl GuiApp {
                         ui.label(RichText::new("/ 100").size(14.0).color(SUBTLE));
                     });
                     ui.add_space(10.0);
-                    ui.add(
-                        egui::ProgressBar::new(progress)
-                            .desired_width(200.0)
-                            .desired_height(6.0)
-                            .fill(ACCENT),
+                    let bar_width = 200.0;
+                    let bar_height = 6.0;
+                    let (bar_rect, _) = ui.allocate_exact_size(
+                        egui::vec2(bar_width, bar_height),
+                        egui::Sense::hover(),
+                    );
+                    let bar_corner = bar_height / 2.0;
+                    ui.painter()
+                        .rect_filled(bar_rect, bar_corner, SURFACE_RAISED);
+                    let filled_width = (bar_rect.width() * progress).max(bar_corner * 2.0);
+                    ui.painter().rect_filled(
+                        egui::Rect::from_min_size(
+                            bar_rect.min,
+                            egui::vec2(filled_width, bar_rect.height()),
+                        ),
+                        bar_corner,
+                        ACCENT,
                     );
                     ui.add_space(20.0);
                     metric(ui, "当前得分", &self.app.score.to_string());
@@ -891,9 +902,19 @@ impl GuiApp {
                     metric(ui, "正确率", &format!("{accuracy}%"));
                     ui.add_space(18.0);
                     metric(ui, "已完成", &self.app.history.len().to_string());
+                    let mut stop_clicked = false;
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        status_pill(ui, phase_label(&self.app.phase), ACCENT);
+                        stop_clicked = secondary_button(
+                            ui,
+                            Icon::LogOut,
+                            "终止答题",
+                            [112.0, 32.0],
+                        )
+                        .clicked();
                     });
+                    if stop_clicked {
+                        self.exit_quiz_confirm = true;
+                    }
                 });
             });
         let wide = ui.available_width() >= 900.0;
@@ -917,6 +938,7 @@ impl GuiApp {
                         egui::Frame::NONE
                             .fill(SURFACE)
                             .stroke(Stroke::new(1.0, BORDER))
+                            .corner_radius(12)
                             .inner_margin(egui::Margin::symmetric(16, 20))
                             .show(ui, |ui| history_panel(ui, &self.app));
                     },
@@ -931,6 +953,7 @@ impl GuiApp {
                 egui::Frame::NONE
                     .fill(SURFACE)
                     .stroke(Stroke::new(1.0, BORDER))
+                    .corner_radius(12)
                     .inner_margin(egui::Margin::same(16))
                     .show(ui, |ui| history_panel(ui, &self.app));
             });
@@ -2777,12 +2800,28 @@ fn history_panel(ui: &mut egui::Ui, app: &App) {
                                     .color(SUBTLE),
                             );
                             ui.label(RichText::new(&item.question).size(13.0).color(TEXT));
-                            if let Some(answer) = item
-                                .chosen_idx
-                                .checked_sub(1)
-                                .and_then(|index| item.options.get(index))
-                            {
-                                ui.label(RichText::new(answer).size(12.0).strong().color(color));
+                            ui.add_space(4.0);
+                            for (idx, opt) in item.options.iter().enumerate() {
+                                let is_chosen = idx + 1 == item.chosen_idx;
+                                let is_correct_answer = item
+                                    .correct_idx
+                                    .map_or(false, |correct| correct == idx);
+                                let label = (b'A' + idx as u8) as char;
+                                let opt_color = if is_chosen {
+                                    color
+                                } else if is_correct_answer {
+                                    SUCCESS
+                                } else {
+                                    SUBTLE
+                                };
+                                let prefix = if is_chosen { "► " } else { "  " };
+                                let mut text = RichText::new(format!("{prefix}{label}. {opt}"))
+                                    .size(12.0)
+                                    .color(opt_color);
+                                if is_chosen || is_correct_answer {
+                                    text = text.strong();
+                                }
+                                ui.label(text);
                             }
                         });
                     });
