@@ -1,6 +1,6 @@
-# bili-hardcore (opencode skill)
+# bili-hardcore (agent skill)
 
-把 [bili-hardcore](https://github.com/Karben233/bili-hardcore) 的 B 站硬核会员自动答题能力做成 opencode skill。装上后对任意 agent 说"帮我答硬核会员"即可触发，agent **自身作答**，无需自备 LLM API Key。
+把 [bili-hardcore](https://github.com/Karben233/bili-hardcore) 的 B 站硬核会员自动答题能力做成通用 agent skill。装上后对任意 agent 说"帮我答硬核会员"即可触发，agent **自身作答**，无需自备 LLM API Key。
 
 ## 与原 Rust 程序的区别
 
@@ -16,17 +16,13 @@
 
 ### 项目内（随仓库走）
 
-已位于 `.agents/skills/bili-hardcore/`，无需额外操作。仓库内任何 opencode 会话自动可用。
+已位于 `.agents/skills/bili-hardcore/`，无需额外操作。仓库内任何兼容的 agent 会话自动可用。
 
 ### 全局（所有项目可用）
 
-拷贝到以下任一位置：
+拷贝到所使用 agent 的全局 skills 目录（不同 agent 位置可能不同，常见路径如 `~/.agents/skills/`、`~/.config/opencode/skills/` 等，具体以各 agent 文档为准）：
 
 ```bash
-# 方式一：opencode 全局 skills
-cp -r .agents/skills/bili-hardcore ~/.config/opencode/skills/bili-hardcore
-
-# 方式二：通用 agents skills
 cp -r .agents/skills/bili-hardcore ~/.agents/skills/bili-hardcore
 ```
 
@@ -37,7 +33,7 @@ cp -r .agents/skills/bili-hardcore ~/.agents/skills/bili-hardcore
 
 ## 使用
 
-在任意 opencode 会话里对 agent 说：
+在任意 agent 会话里对 agent 说：
 
 - "帮我答 B 站硬核会员"
 - "开始硬核会员答题"
