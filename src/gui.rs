@@ -926,9 +926,10 @@ impl GuiApp {
         let wide = ui.available_width() >= 900.0;
         if wide {
             let width = ui.available_width();
+            let height = (ui.available_height() - 24.0).max(420.0);
             ui.horizontal_top(|ui| {
                 ui.allocate_ui_with_layout(
-                    egui::vec2(width - 320.0 - 24.0, 0.0),
+                    egui::vec2(width - 320.0 - 24.0, height),
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
                         egui::Frame::NONE
@@ -938,7 +939,7 @@ impl GuiApp {
                     },
                 );
                 ui.allocate_ui_with_layout(
-                    egui::vec2(320.0, 0.0),
+                    egui::vec2(320.0, height),
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
                         ui.add_space(24.0);
@@ -2626,7 +2627,7 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
     // width so short/empty streaming text cannot make the layout jump.
     let panel_width = ui.available_width();
     ui.set_width(panel_width);
-    ui.set_min_height(ui.available_height().max(420.0));
+    ui.set_min_height(ui.available_height());
     ui.label(
         RichText::new(format!("第 {} 题", app.question_num))
             .size(12.0)
@@ -2761,10 +2762,13 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
     });
     if !app.thinking_text.is_empty() || matches!(app.phase, QuizPhase::WaitingLlm) {
         ui.add_space(14.0);
+        // AI 分析摘要撑满剩余高度，窗口拉长时自动跟随。
+        let summary_height = ui.available_height();
         surface()
             .inner_margin(egui::Margin::same(16))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
+                ui.set_min_height(summary_height);
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("●").size(11.0).color(ACCENT));
                     ui.label(
@@ -2780,7 +2784,6 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
                 ui.add_space(8.0);
                 egui::ScrollArea::vertical()
                     .stick_to_bottom(true)
-                    .max_height(120.0)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
@@ -2799,10 +2802,12 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
 }
 
 fn history_panel(ui: &mut egui::Ui, app: &App) {
-    ui.set_min_height(ui.available_height().max(420.0));
+    ui.set_min_height(ui.available_height());
     ui.label(medium("本次答题记录", 13.0, MUTED));
     ui.add_space(12.0);
-    egui::ScrollArea::vertical().show(ui, |ui| {
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show(ui, |ui| {
         if app.history.is_empty() {
             ui.vertical_centered(|ui| {
                 ui.add_space(70.0);
@@ -2849,8 +2854,7 @@ fn history_panel(ui: &mut egui::Ui, app: &App) {
                                 } else {
                                     SUBTLE
                                 };
-                                let prefix = if is_chosen { "► " } else { "  " };
-                                let mut text = RichText::new(format!("{prefix}{label}. {opt}"))
+                                let mut text = RichText::new(format!("{label}. {opt}"))
                                     .size(12.0)
                                     .color(opt_color);
                                 if is_chosen || is_correct_answer {
