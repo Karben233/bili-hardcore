@@ -2691,46 +2691,74 @@ fn question_panel(ui: &mut egui::Ui, app: &App) {
         ui.add_space(8.0);
     }
     ui.add_space(10.0);
-    match &app.phase {
-        QuizPhase::WaitingLlm => {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label(RichText::new("AI 正在分析…").color(MUTED));
-            });
+    // 状态行统一使用相同的 Frame 容器（与 inline_alert 同结构），
+    // 避免不同阶段 spinner 矮行与 alert 框的高度差导致下方内容抖动。
+    let (status_color, status_filled) = match &app.phase {
+        QuizPhase::WaitingLlm | QuizPhase::FetchingQuestion | QuizPhase::Submitting => {
+            (MUTED, false)
         }
-        QuizPhase::WaitingRetry { attempt, deadline } => {
-            inline_alert(
-                ui,
-                Icon::Clock,
-                &format!(
-                    "模型请求超时，{} 秒后进行第 {attempt}/{} 次重试",
-                    deadline.saturating_duration_since(Instant::now()).as_secs(),
-                    App::MAX_LLM_RETRIES
-                ),
-                WARNING,
-            );
-        }
-        QuizPhase::Submitting => {
-            ui.label(RichText::new("正在提交答案…").color(MUTED));
-        }
+        QuizPhase::WaitingRetry { .. } => (WARNING, true),
         QuizPhase::ShowingResult { correct, .. } => {
-            inline_alert(
-                ui,
-                if *correct {
-                    Icon::CircleCheck
-                } else {
-                    Icon::CircleX
-                },
-                if *correct {
-                    "回答正确，已获得 1 分"
-                } else {
-                    "回答错误，未获得分数"
-                },
-                if *correct { TEAL } else { DANGER },
-            );
+            (if *correct { TEAL } else { DANGER }, true)
         }
-        _ => {}
+        _ => (Color32::TRANSPARENT, false),
+    };
+    let mut status_frame = egui::Frame::NONE
+        .stroke(Stroke::new(1.0, status_color.gamma_multiply(0.3)))
+        .corner_radius(8)
+        .inner_margin(egui::Margin::same(10));
+    if status_filled {
+        status_frame = status_frame.fill(status_color.gamma_multiply(0.08));
     }
+    status_frame.show(ui, |ui| {
+        ui.horizontal(|ui| match &app.phase {
+            QuizPhase::WaitingLlm => {
+                ui.spinner();
+                ui.label(RichText::new("AI 正在分析…").size(12.0).color(TEXT));
+            }
+            QuizPhase::FetchingQuestion => {
+                ui.spinner();
+                ui.label(RichText::new("正在加载下一题…").size(12.0).color(TEXT));
+            }
+            QuizPhase::WaitingRetry { attempt, deadline } => {
+                ui.label(icon_only(Icon::Clock, 16.0, status_color));
+                ui.label(
+                    RichText::new(format!(
+                        "模型请求超时，{} 秒后进行第 {attempt}/{} 次重试",
+                        deadline.saturating_duration_since(Instant::now()).as_secs(),
+                        App::MAX_LLM_RETRIES
+                    ))
+                    .size(12.0)
+                    .color(TEXT),
+                );
+            }
+            QuizPhase::Submitting => {
+                ui.spinner();
+                ui.label(RichText::new("正在提交答案…").size(12.0).color(TEXT));
+            }
+            QuizPhase::ShowingResult { correct, .. } => {
+                ui.label(icon_only(
+                    if *correct {
+                        Icon::CircleCheck
+                    } else {
+                        Icon::CircleX
+                    },
+                    16.0,
+                    status_color,
+                ));
+                ui.label(
+                    RichText::new(if *correct {
+                        "回答正确，已获得 1 分"
+                    } else {
+                        "回答错误，未获得分数"
+                    })
+                    .size(12.0)
+                    .color(TEXT),
+                );
+            }
+            _ => {}
+        });
+    });
     if !app.thinking_text.is_empty() || matches!(app.phase, QuizPhase::WaitingLlm) {
         ui.add_space(14.0);
         surface()
