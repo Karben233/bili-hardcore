@@ -148,6 +148,9 @@ impl GuiApp {
             QuizPhase::CheckingLevel => 4,
             QuizPhase::LevelVerified { .. } => 5,
             QuizPhase::LevelInsufficient { .. } | QuizPhase::LevelCheckFailed(_) => 6,
+            // 题间拉取下一题时复用答题场景键，避免触发淡入淡出动画造成闪烁；
+            // 首次拉题（尚无题目数据）仍独立成景。
+            QuizPhase::FetchingQuestion if !self.app.question_text.is_empty() => 10,
             QuizPhase::FetchingQuestion => 7,
             QuizPhase::Captcha(_) => 8,
             QuizPhase::WaitingLlm | QuizPhase::WaitingRetry { .. } => 9,
@@ -161,13 +164,14 @@ impl GuiApp {
     fn shell(&mut self, root: &mut egui::Ui) {
         let ctx = root.ctx().clone();
         let answering = self.app.page == Page::Quiz
-            && matches!(
+            && (matches!(
                 self.app.phase,
                 QuizPhase::WaitingLlm
                     | QuizPhase::WaitingRetry { .. }
                     | QuizPhase::Submitting
                     | QuizPhase::ShowingResult { .. }
-            );
+            ) || (matches!(self.app.phase, QuizPhase::FetchingQuestion)
+                && !self.app.question_text.is_empty()));
         let root_item_spacing = root.spacing().item_spacing;
         root.spacing_mut().item_spacing.y = 0.0;
         egui::Frame::NONE
@@ -522,13 +526,16 @@ impl GuiApp {
 
     fn quiz(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let phase = self.app.phase.clone();
+        // 题间切换时（已答过题）继续展示当前题目面板，不切到「正在获取题目」
+        // 状态页，避免快速闪烁；首次拉题仍走状态页（此时还没有题目数据）。
         if matches!(
             phase,
             QuizPhase::WaitingLlm
                 | QuizPhase::WaitingRetry { .. }
                 | QuizPhase::Submitting
                 | QuizPhase::ShowingResult { .. }
-        ) {
+        ) || (matches!(phase, QuizPhase::FetchingQuestion) && !self.app.question_text.is_empty())
+        {
             self.question(ui);
             return;
         }
