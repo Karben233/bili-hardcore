@@ -867,7 +867,6 @@ impl GuiApp {
             .fill(SURFACE)
             .stroke(Stroke::new(1.0, BORDER))
             .inner_margin(egui::Margin::symmetric(24, 12))
-            .corner_radius(12)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.horizontal(|ui| {
@@ -942,6 +941,7 @@ impl GuiApp {
                     egui::vec2(320.0, 0.0),
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
+                        ui.add_space(24.0);
                         egui::Frame::NONE
                             .fill(SURFACE)
                             .stroke(Stroke::new(1.0, BORDER))
