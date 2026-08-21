@@ -87,5 +87,21 @@ bili-hardcore update             # 检查并更新到最新版本
 bili-hardcore uninstall          # 卸载
 ```
 
+## 作为 agent skill 使用
+
+本项目同时提供了一个通用的 agent skill（位于 `.agents/skills/bili-hardcore/`）。装上后对任意支持该约定的 AI 编程助手说"帮我答硬核会员"即可触发，由 **agent 自身作答**。
+
+## 安装
+
+与 agent 对话：`帮我安装这个skill https://github.com/Karben233/bili-hardcore/tree/main/.agents/skills/bili-hardcore`
+
+### 使用
+
+在任意 agent 会话里对 agent 说：
+
+- "帮我答 B 站硬核会员"
+- "开始硬核会员答题"
+- "查一下我的硬核会员答题得分"
+
 ## 运行截图
 ![运行截图](screenshot.png)
