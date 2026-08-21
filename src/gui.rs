@@ -901,7 +901,7 @@ impl GuiApp {
             let width = ui.available_width();
             ui.horizontal_top(|ui| {
                 ui.allocate_ui_with_layout(
-                    egui::vec2(width - 320.0, 0.0),
+                    egui::vec2(width - 320.0 - 24.0, 0.0),
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
                         egui::Frame::NONE
