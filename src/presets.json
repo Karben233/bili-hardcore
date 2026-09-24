@@ -38,5 +38,13 @@
             "base_url": "https://api.x.ai/v1/chat/completions",
             "model": "grok-4.6"
         }
+    },
+    {
+        "provider": "jev",
+        "provider_name": "JEV (TypeSafe)",
+        "config": {
+            "base_url": "https://api.typesafe.ai/v1/systemone",
+            "model": "jev-latest"
+        }
     }
 ]

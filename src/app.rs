@@ -627,49 +627,47 @@ impl App {
     }
 
     pub fn spawn_llm(&self) {
-        if let Some(ref cfg) = self.config {
-            let token = self.quiz_token.clone();
-            let client = crate::llm::OpenAiClient::new(cfg);
-            let prompt = format!(
-                "题目:{}\n答案:{:?}",
-                self.question_text,
-                self.answers.iter().map(|a| &a.text).collect::<Vec<_>>()
-            );
-            let (llm_tx, mut llm_rx) = mpsc::unbounded_channel::<LlmChunk>();
-            let tx = self.tx.clone();
+        let Some(cfg) = self.config.as_ref() else {
+            return;
+        };
+        let token = self.quiz_token.clone();
+        let client = crate::llm::LlmClient::new(cfg);
+        let options: Vec<String> = self.answers.iter().map(|a| a.text.clone()).collect();
+        let (llm_tx, mut llm_rx) = mpsc::unbounded_channel::<LlmChunk>();
+        let tx = self.tx.clone();
 
-            let full_prompt = crate::config::build_quiz_prompt(
-                &self.selected_categories,
-                &prompt,
-                cfg.enable_thinking,
-            );
-            tracing::info!("LLM prompt:\n{}", full_prompt);
+        client.ask(
+            &self.question_text,
+            &options,
+            &self.selected_categories,
+            llm_tx,
+            token.clone(),
+        );
 
-            client.ask_stream(&prompt, self.selected_categories.clone(), llm_tx, token.clone());
-
-            tokio::spawn(async move {
-                while let Some(chunk) = llm_rx.recv().await {
-                    if token.is_cancelled() { return; }
-                    match chunk {
-                        LlmChunk::Thinking(_) | LlmChunk::Content(_) => {
-                            let _ = tx.send(AppEvent::LlmChunk(chunk));
-                        }
-                        LlmChunk::Done(text) => {
-                            let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Done(text)));
-                            return;
-                        }
-                        LlmChunk::Error(msg) => {
-                            // 传输/API/解析失败：不自动重试。此时请求可能已到达上游
-                            // 并计费，叠加多个长任务会耗尽中转并发槽。仅当模型给出无效
-                            // 答案（Done 但 parse_answer 失败）时才走重试路径。
-                            tracing::warn!("LLM 请求失败，停止自动重试: {}", msg);
-                            let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Error(msg)));
-                            return;
-                        }
+        tokio::spawn(async move {
+            while let Some(chunk) = llm_rx.recv().await {
+                if token.is_cancelled() {
+                    return;
+                }
+                match chunk {
+                    LlmChunk::Thinking(_) | LlmChunk::Content(_) => {
+                        let _ = tx.send(AppEvent::LlmChunk(chunk));
+                    }
+                    LlmChunk::Done(text) => {
+                        let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Done(text)));
+                        return;
+                    }
+                    LlmChunk::Error(msg) => {
+                        // 传输/API/解析失败：不自动重试。此时请求可能已到达上游
+                        // 并计费，叠加多个长任务会耗尽中转并发槽。仅当模型给出无效
+                        // 答案（Done 但 parse_answer 失败）时才走重试路径。
+                        tracing::warn!("LLM 请求失败，停止自动重试: {}", msg);
+                        let _ = tx.send(AppEvent::LlmChunk(LlmChunk::Error(msg)));
+                        return;
                     }
                 }
-            });
-        }
+            }
+        });
     }
 
     pub fn spawn_submit(&self, ans_idx: usize) {

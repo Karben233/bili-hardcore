@@ -2,7 +2,7 @@ use crate::app::{App, ConfigFocus};
 use crate::config;
 use ratatui::style::{Color, Modifier, Style};
 
-const LABELS: [&str; 3] = ["API URL(Completions)", "模型名称", "API Key"];
+const LABELS: [&str; 3] = ["API URL", "模型名称", "API Key"];
 
 fn focus_index(focus: ConfigFocus) -> usize {
     match focus {
@@ -54,7 +54,9 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     }
 
     let focus = focus_index(app.cfg_focus);
-    let thinking_on = app.cfg_thinking;
+    // JEV 直接返回选项概率分布，没有推理开关可调
+    let is_jev = crate::llm::is_jev_endpoint(&app.cfg_fields[0]);
+    let thinking_on = app.cfg_thinking && !is_jev;
 
     let mut layout_constraints: Vec<Constraint> = vec![
         Constraint::Length(2), // header
@@ -79,7 +81,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     let effort_shift: usize = if thinking_on { 0 } else { 1 };
 
     f.render_widget(
-        Paragraph::new("请输入 OpenAI 兼容 API 配置信息")
+        Paragraph::new("请输入 API 配置信息")
             .style(Style::default().fg(Color::Yellow))
             .alignment(Alignment::Center),
         chunks[0],
@@ -120,7 +122,7 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     }
 
     // Thinking toggle (chunks[4])
-    let thinking_focused = app.cfg_focus == ConfigFocus::ThinkingToggle;
+    let thinking_focused = app.cfg_focus == ConfigFocus::ThinkingToggle && !is_jev;
     let toggle_border_color = if thinking_focused {
         Color::Cyan
     } else {
@@ -133,10 +135,12 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
     let toggle_inner = toggle_block.inner(chunks[4]);
     f.render_widget(toggle_block, chunks[4]);
 
-    let toggle_text = if app.cfg_thinking {
-        "[✓] 开启 - 准确率高，速度慢"
+    let toggle_text = if is_jev {
+        "[ - ] JEV 为结构化决策模型，直接返回选项概率，无此开关".to_string()
+    } else if app.cfg_thinking {
+        "[✓] 开启 - 准确率高，速度慢".to_string()
     } else {
-        "[ ] 关闭/最低 - 速度优先（部分模型仍会低度推理）"
+        "[ ] 关闭/最低 - 速度优先（部分模型仍会低度推理）".to_string()
     };
     let toggle_color = if thinking_focused {
         Color::White
