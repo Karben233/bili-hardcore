@@ -192,6 +192,11 @@ pub fn save_history(history: &[HistoryItem]) -> Result<()> {
     Ok(())
 }
 
+/// 构建对话 prompt
+pub fn build_chat_prompt(question: &str, options: &[String]) -> String {
+    format!("题目:{}\n答案:{:?}", question, options)
+}
+
 /// 构建 LLM prompt
 pub fn build_quiz_prompt(categories: &[String], question: &str, enable_thinking: bool) -> String {
     let cat_str = if categories.is_empty() {
@@ -238,5 +243,24 @@ mod tests {
         assert_eq!(grok.provider_name, "Grok (xAI)");
         assert_eq!(grok.config.base_url, "https://api.x.ai/v1/chat/completions");
         assert!(!grok.config.model.trim().is_empty());
+    }
+
+    #[test]
+    fn jev_preset_is_unique_and_routes_to_the_native_client() {
+        let presets = load_presets();
+        let jev_presets: Vec<_> = presets
+            .iter()
+            .filter(|preset| preset.provider == "jev")
+            .collect();
+
+        assert_eq!(jev_presets.len(), 1);
+        let jev = jev_presets[0];
+        assert_eq!(jev.provider_name, "JEV (TypeSafe)");
+        assert_eq!(jev.config.base_url, "https://api.typesafe.ai/v1/systemone");
+        assert_eq!(jev.config.model, "jev-latest");
+        assert!(
+            crate::llm::is_jev_endpoint(&jev.config.base_url),
+            "预设 URL 必须能被识别为 JEV 端点，否则会退回 Chat Completions 协议"
+        );
     }
 }
