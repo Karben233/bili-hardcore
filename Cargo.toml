@@ -4,6 +4,10 @@ version = "1.0.8"
 edition = "2024"
 description = "B站硬核会员自动答题工具"
 
+[features]
+default = ["gui"]
+gui = ["dep:eframe", "dep:lucide-icons"]
+
 [dependencies]
 ratatui = "0.29"
 crossterm = { version = "0.28", features = ["event-stream"] }
@@ -25,13 +29,26 @@ anyhow = "1"
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "local-time"] }
-time = { version = "0.3", features = ["local-offset", "macros"] }
+time = { version = "0.3", features = ["formatting", "local-offset", "macros"] }
 dirs = "6"
 urlencoding = "2"
 unicode-width = "0.2"
 ratatui-image = { version = "9", default-features = false, features = ["crossterm"] }
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 webbrowser = "1"
+eframe = { version = "0.36", optional = true, default-features = false, features = ["default_fonts", "glow", "x11"] }
+lucide-icons = { version = "1.31", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+] }
+
+[build-dependencies]
+winresource = { version = "0.1.31", default-features = false }
 
 [profile.release]
 opt-level = "z"

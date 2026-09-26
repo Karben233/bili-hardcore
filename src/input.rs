@@ -1,5 +1,5 @@
 use crate::app::*;
-use crate::config::{self, OpenAiConfig};
+use crate::config;
 use crossterm::event::{KeyCode, KeyModifiers};
 
 use crate::app::CaptchaFocus;
@@ -53,12 +53,7 @@ impl App {
                         .min(presets.len().saturating_sub(1));
                 }
                 KeyCode::Enter => {
-                    if let Some(preset) = presets.get(self.cfg_preset_sel) {
-                        self.cfg_fields[0] = preset.config.base_url.clone();
-                        self.cfg_fields[1] = preset.config.model.clone();
-                        self.cfg_cursors[0] = self.cfg_fields[0].len();
-                        self.cfg_cursors[1] = self.cfg_fields[1].len();
-                    }
+                    self.apply_preset(self.cfg_preset_sel);
                     self.cfg_preset_open = false;
                 }
                 KeyCode::Esc => {
@@ -106,7 +101,9 @@ impl App {
         match code {
             KeyCode::Esc => self.back(),
             KeyCode::Enter => match self.cfg_focus {
-                ConfigFocus::SaveBtn => self.save_config(),
+                ConfigFocus::SaveBtn => {
+                    let _ = self.save_config();
+                }
                 ConfigFocus::ResetBtn => {
                     self.config_confirm_reset = true;
                     self.config_reset_choice = 0;
@@ -247,7 +244,10 @@ impl App {
                 _ => {}
             },
             QuizPhase::Captcha(_) => self.key_captcha(key),
-            QuizPhase::Finished { .. } | QuizPhase::Error(_) => {
+            QuizPhase::LevelInsufficient { .. }
+            | QuizPhase::LevelCheckFailed(_)
+            | QuizPhase::Finished { .. }
+            | QuizPhase::Error(_) => {
                 if matches!(code, KeyCode::Enter | KeyCode::Esc) {
                     self.back();
                 }
@@ -333,28 +333,18 @@ impl App {
             },
             // Space toggles category selection (only in Categories focus)
             KeyCode::Char(' ') if matches!(cs.focus, CaptchaFocus::Categories) => {
-                let count = cs.categories.iter().filter(|c| c.selected).count();
-                let mut cats = cs.categories;
-                if cs.cat_focus < cats.len() {
-                    if cats[cs.cat_focus].selected {
-                        cats[cs.cat_focus].selected = false;
-                    } else if count < 3 {
-                        cats[cs.cat_focus].selected = true;
-                    }
-                }
-                CaptchaState {
-                    categories: cats,
-                    error: String::new(),
-                    ..cs
+                let index = cs.cat_focus;
+                self.phase = QuizPhase::Captcha(cs);
+                self.toggle_captcha_category(index);
+                match std::mem::replace(&mut self.phase, QuizPhase::NotConfigured) {
+                    QuizPhase::Captcha(current) => current,
+                    _ => unreachable!(),
                 }
             }
             // Refresh captcha (Ctrl+R works everywhere, preserves selections)
             KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                let selected: Vec<bool> = cs.categories.iter().map(|c| c.selected).collect();
-                self.captcha_preserve = Some((selected, cs.cat_focus, cs.focus, String::new()));
-                self.captcha_image = None;
-                self.spawn_fetch_captcha();
-                self.phase = QuizPhase::FetchingQuestion;
+                self.phase = QuizPhase::Captcha(cs);
+                self.refresh_captcha();
                 return;
             }
             // Ctrl+B: open captcha in browser (must be before generic Char(c))
@@ -384,40 +374,13 @@ impl App {
             }
             // Enter on Submit: try to submit with error feedback
             KeyCode::Enter if matches!(cs.focus, CaptchaFocus::Submit) => {
-                let ids: String = cs
-                    .categories
-                    .iter()
-                    .filter(|c| c.selected)
-                    .map(|c| c.id.to_string())
-                    .collect::<Vec<_>>()
-                    .join(",");
-                if cs.input.is_empty() && ids.is_empty() {
-                    CaptchaState {
-                        error: "请选择分类并输入验证码".into(),
-                        ..cs
-                    }
-                } else if cs.input.is_empty() {
-                    CaptchaState {
-                        error: "请输入验证码".into(),
-                        ..cs
-                    }
-                } else if ids.is_empty() {
-                    CaptchaState {
-                        error: "请选择分类".into(),
-                        ..cs
-                    }
-                } else {
-                    self.selected_categories = cs
-                        .categories
-                        .iter()
-                        .filter(|c| c.selected)
-                        .map(|c| c.name.clone())
-                        .collect();
-                    let _ = config::save_categories(&self.selected_categories);
-                    self.spawn_captcha_submit(&cs.input, &cs.captcha_token, &ids);
-                    self.phase = QuizPhase::FetchingQuestion;
-                    return;
+                self.phase = QuizPhase::Captcha(cs);
+                if let Err(error) = self.submit_captcha()
+                    && let QuizPhase::Captcha(current) = &mut self.phase
+                {
+                    current.error = error;
                 }
+                return;
             }
             // Enter on non-Submit: do nothing
             KeyCode::Enter => cs,
@@ -428,56 +391,4 @@ impl App {
     }
 
     // --- Navigation actions ---
-
-    fn enter_config(&mut self) {
-        let is_first_time = self.config.is_none();
-        if let Some(ref c) = self.config {
-            self.cfg_fields = [c.base_url.clone(), c.model.clone(), c.api_key.clone()];
-        }
-        self.cfg_cursors = [
-            self.cfg_fields[0].len(),
-            self.cfg_fields[1].len(),
-            self.cfg_fields[2].len(),
-        ];
-        self.cfg_focus = ConfigFocus::BaseUrl;
-        // Auto-open preset selection for first-time users (no existing config)
-        if is_first_time {
-            self.cfg_preset_open = true;
-            self.cfg_preset_sel = 0;
-        }
-        self.go(Page::Config);
-    }
-
-    fn save_config(&mut self) {
-        let base = self.cfg_fields[0].trim_end_matches('/').to_string();
-        let model = self.cfg_fields[1].clone();
-        let key = self.cfg_fields[2].clone();
-        if base.is_empty() || model.is_empty() || key.is_empty() {
-            return;
-        }
-        let cfg = OpenAiConfig {
-            base_url: base,
-            model,
-            api_key: key,
-            enable_thinking: self.cfg_thinking,
-            reasoning_effort: ["low", "high", "max"][self.cfg_effort].to_string(),
-            enable_fast_mode: self.cfg_fast_mode,
-        };
-        let _ = crate::config::save_openai_config(&cfg).map_err(|e| tracing::error!("{}", e));
-        self.config = Some(cfg);
-        self.back();
-        // 保存配置后如果回到答题页，重新启动答题流程
-        if self.page == Page::Quiz {
-            self.spawn_login();
-        }
-    }
-
-    fn enter_quiz(&mut self) {
-        self.go(Page::Quiz);
-        if self.config.is_none() {
-            self.phase = QuizPhase::NotConfigured;
-            return;
-        }
-        self.spawn_login();
-    }
 }

@@ -1,6 +1,6 @@
 # Bili-Hardcore
 
-B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。
+B 站硬核会员自动答题工具，利用 LLM 实现智能答题功能。默认提供原生桌面 GUI，并保留终端界面。
 
 ## 使用前须知
 - 请确保您的 B 站账号已满 6 级，根据 B 站规则，6 级用户才可以进行硬核会员试炼
@@ -40,8 +40,9 @@ irm https://github.com/Karben233/bili-hardcore/releases/latest/download/install.
 |------|---------|
 | macOS (Intel / Apple Silicon) | `bili-hardcore-*-darwin-universal.tar.gz` |
 | Windows (x64) | `bili-hardcore-*-windows-x64.zip` |
-| Linux (x64) | `bili-hardcore-*-linux-x64-musl.tar.gz` |
-| Linux (ARM64) | `bili-hardcore-*-linux-arm64-musl.tar.gz` |
+| Linux (x64, GUI + TUI) | `bili-hardcore-*-linux-x64.tar.gz` |
+| Linux (ARM64, GUI + TUI) | `bili-hardcore-*-linux-arm64.tar.gz` |
+| Linux (musl, 仅 TUI) | `bili-hardcore-*-linux-*-musl.tar.gz` |
 
 解压后赋予执行权限即可运行：
 ```bash
@@ -50,7 +51,7 @@ chmod +x bili-hardcore
 ```
 
 > **macOS 提示**: 如遇"无法验证开发者"，执行 `xattr -cr /path/to/bili-hardcore`
-> **Linux 提示**: 优先使用 `-musl` 版本（静态链接，兼容所有发行版）
+> **Linux 提示**: GUI 版本使用 glibc 并需要图形桌面/X11；`-musl` 是无 GUI 的静态 TUI 兼容版本。
 
 ### 从源码构建
 
@@ -63,12 +64,21 @@ cargo build --release
 ./target/release/bili-hardcore
 ```
 
+仅构建 TUI（适合 musl 或无图形环境）：
+
+```bash
+cargo build --release --no-default-features
+./target/release/bili-hardcore --tui
+```
+
 ## 使用
 
 ### 启动
 ```bash
-bili-hardcore                    # 交互式配置后启动
-bili-hardcore <url> <model> -k <api-key>   # 通过命令行参数直接启动
+bili-hardcore                    # 启动桌面 GUI
+bili-hardcore --tui              # 启动终端界面
+bili-hardcore <url> <model> -k <api-key>   # 保存配置并启动 GUI
+bili-hardcore --tui <url> <model> -k <api-key>  # 保存配置并启动 TUI
 ```
 
 ### 命令
@@ -76,6 +86,22 @@ bili-hardcore <url> <model> -k <api-key>   # 通过命令行参数直接启动
 bili-hardcore update             # 检查并更新到最新版本
 bili-hardcore uninstall          # 卸载
 ```
+
+## 作为 agent skill 使用
+
+本项目同时提供了一个通用的 agent skill（位于 `.agents/skills/bili-hardcore/`）。装上后对任意支持该约定的 AI 编程助手说"帮我答硬核会员"即可触发，由 **agent 自身作答**。
+
+## 安装
+
+与 agent 对话：`帮我安装这个skill https://github.com/Karben233/bili-hardcore/tree/main/.agents/skills/bili-hardcore`
+
+### 使用
+
+在任意 agent 会话里对 agent 说：
+
+- "帮我答 B 站硬核会员"
+- "开始硬核会员答题"
+- "查一下我的硬核会员答题得分"
 
 ## 运行截图
 ![运行截图](screenshot.png)

@@ -101,10 +101,14 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
             );
         }
 
-        QuizPhase::LoggingIn | QuizPhase::CheckingLevel | QuizPhase::FetchingQuestion => {
+        QuizPhase::LoggingIn
+        | QuizPhase::CheckingLevel
+        | QuizPhase::LevelVerified { .. }
+        | QuizPhase::FetchingQuestion => {
             let msg = match &app.phase {
                 QuizPhase::LoggingIn => "正在准备登录...",
                 QuizPhase::CheckingLevel => "正在验证用户等级...",
+                QuizPhase::LevelVerified { .. } => "账号等级验证通过，正在继续...",
                 QuizPhase::FetchingQuestion => "正在获取题目...",
                 _ => "",
             };
@@ -543,6 +547,50 @@ pub fn draw(f: &mut ratatui::Frame, app: &App) {
                 Paragraph::new(text)
                     .alignment(Alignment::Center)
                     .wrap(Wrap { trim: true }),
+                chunks[1],
+            );
+            f.render_widget(
+                Paragraph::new("  [ Enter/ESC 返回首页 ]  ")
+                    .style(selected_style(Color::Cyan))
+                    .alignment(Alignment::Center),
+                chunks[2],
+            );
+        }
+
+        QuizPhase::LevelInsufficient { level } => {
+            let chunks = Layout::vertical([
+                Constraint::Percentage(35),
+                Constraint::Length(3),
+                Constraint::Length(2),
+                Constraint::Percentage(35),
+            ])
+            .split(inner);
+            f.render_widget(
+                Paragraph::new(format!("当前账号等级 {level}，参与试炼需要达到 6 级"))
+                    .style(Style::default().fg(Color::Yellow))
+                    .alignment(Alignment::Center),
+                chunks[1],
+            );
+            f.render_widget(
+                Paragraph::new("  [ Enter/ESC 返回首页 ]  ")
+                    .style(selected_style(Color::Cyan))
+                    .alignment(Alignment::Center),
+                chunks[2],
+            );
+        }
+
+        QuizPhase::LevelCheckFailed(msg) => {
+            let chunks = Layout::vertical([
+                Constraint::Percentage(35),
+                Constraint::Length(3),
+                Constraint::Length(2),
+                Constraint::Percentage(35),
+            ])
+            .split(inner);
+            f.render_widget(
+                Paragraph::new(format!("账号等级验证失败: {msg}"))
+                    .style(Style::default().fg(Color::Red))
+                    .alignment(Alignment::Center),
                 chunks[1],
             );
             f.render_widget(

@@ -166,7 +166,7 @@ pub fn save_categories(categories: &[String]) -> Result<()> {
 
 // --- Quiz History ---
 
-use crate::app::HistoryItem;
+use crate::app::{HistoryItem, SessionHistory};
 
 pub fn history_path() -> PathBuf {
     config_dir().join("history.json")
@@ -189,6 +189,45 @@ pub fn save_history(history: &[HistoryItem]) -> Result<()> {
     let path = history_path();
     let content = serde_json::to_string_pretty(history).context("序列化答题记录失败")?;
     fs::write(&path, content).context("写入答题记录失败")?;
+    Ok(())
+}
+
+pub fn sessions_path() -> PathBuf {
+    config_dir().join("sessions.json")
+}
+
+pub fn load_sessions() -> Vec<SessionHistory> {
+    let path = sessions_path();
+    if !path.exists() {
+        return vec![];
+    }
+    let content = match fs::read_to_string(&path) {
+        Ok(content) => content,
+        Err(error) => {
+            tracing::warn!("读取场次历史失败: {error}");
+            return vec![];
+        }
+    };
+    serde_json::from_str(&content).unwrap_or_else(|error| {
+        tracing::warn!("解析场次历史失败: {error}");
+        vec![]
+    })
+}
+
+#[cfg_attr(test, allow(dead_code))]
+pub fn save_sessions(sessions: &[SessionHistory]) -> Result<()> {
+    ensure_config_dir()?;
+    let content = serde_json::to_string_pretty(sessions).context("序列化场次历史失败")?;
+    fs::write(sessions_path(), content).context("写入场次历史失败")?;
+    Ok(())
+}
+
+pub fn delete_local_history() -> Result<()> {
+    for path in [history_path(), sessions_path(), categories_path()] {
+        if path.exists() {
+            fs::remove_file(path).context("删除本地答题数据失败")?;
+        }
+    }
     Ok(())
 }
 
@@ -238,5 +277,14 @@ mod tests {
         assert_eq!(grok.provider_name, "Grok (xAI)");
         assert_eq!(grok.config.base_url, "https://api.x.ai/v1/chat/completions");
         assert!(!grok.config.model.trim().is_empty());
+    }
+
+    #[test]
+    fn old_question_history_shape_remains_compatible() {
+        let json =
+            r#"[{"num":1,"question":"题目","options":["A","B"],"chosen_idx":1,"correct":true}]"#;
+        let history: Vec<HistoryItem> = serde_json::from_str(json).unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].correct_idx, None);
     }
 }
