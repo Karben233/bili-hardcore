@@ -952,7 +952,9 @@ impl App {
                     let tx = self.tx.clone();
                     tokio::spawn(async move {
                         tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
-                        if ct.is_cancelled() { return; }
+                        if ct.is_cancelled() {
+                            return;
+                        }
                         let _ = tx.send(AppEvent::LlmRetryFire);
                     });
                 }

@@ -14,6 +14,9 @@ use tokio_util::sync::CancellationToken;
 const MAX_JSON_RESPONSE_SIZE: usize = 8 * 1024 * 1024;
 const MAX_RESPONSE_SNIFF_SIZE: usize = 8 * 1024;
 const MAX_VISIBLE_OUTPUT_TOKENS: u64 = 128;
+/// 思考模式下推理 token 与正文共享 max_tokens 预算（DeepSeek、智谱等），
+/// 128 会被推理过程耗尽导致正文被截断，因此思考时放宽上限。
+const MAX_THINKING_OUTPUT_TOKENS: u64 = 4096;
 const UTF8_BOM: &[u8] = b"\xef\xbb\xbf";
 const SSE_PREFIXES: [&[u8]; 4] = [b"data:", b"event:", b"id:", b"retry:"];
 
@@ -65,6 +68,7 @@ enum SniffStop {
 struct ParsedPayload {
     reasoning: Option<String>,
     content: Option<String>,
+    finish_reason: Option<String>,
 }
 
 fn api_dialect(base_url: &str, model: &str) -> ApiDialect {
@@ -99,6 +103,14 @@ fn xai_reasoning_effort(enable_thinking: bool, saved_effort: &str) -> &'static s
     }
 }
 
+fn output_token_limit(enable_thinking: bool) -> u64 {
+    if enable_thinking {
+        MAX_THINKING_OUTPUT_TOKENS
+    } else {
+        MAX_VISIBLE_OUTPUT_TOKENS
+    }
+}
+
 fn build_request_body(
     dialect: ApiDialect,
     model: &str,
@@ -121,20 +133,22 @@ fn build_request_body(
     } else {
         "none"
     };
+    let max_output_tokens = output_token_limit(enable_thinking);
 
     match dialect {
         ApiDialect::OpenAi => {
-            body["max_completion_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
+            body["max_completion_tokens"] = serde_json::json!(max_output_tokens);
             body["reasoning_effort"] = serde_json::json!(effort);
         }
         ApiDialect::XAi => {
-            // xAI 已弃用 max_tokens；该字段限制可见正文，推理开销由 effort 控制。
-            body["max_completion_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
+            // xAI 已弃用 max_tokens；max_completion_tokens 同时限制推理与正文，
+            // 非思考时收紧到 128 防止啰嗦正文。
+            body["max_completion_tokens"] = serde_json::json!(max_output_tokens);
             body["reasoning_effort"] =
                 serde_json::json!(xai_reasoning_effort(enable_thinking, reasoning_effort,));
         }
         ApiDialect::Extended => {
-            body["max_tokens"] = serde_json::json!(MAX_VISIBLE_OUTPUT_TOKENS);
+            body["max_tokens"] = serde_json::json!(max_output_tokens);
             body["enable_thinking"] = serde_json::json!(enable_thinking);
             body["thinking"] = serde_json::json!({
                 "type": if enable_thinking { "enabled" } else { "disabled" }
@@ -340,7 +354,29 @@ fn parse_payload(value: &serde_json::Value) -> Result<Option<ParsedPayload>, Str
                 .or_else(|| payload.get("reasoning")),
         )?,
         content: extract_text(payload.get("content"))?,
+        finish_reason: choice
+            .get("finish_reason")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned),
     }))
+}
+
+/// `finish_reason == "length"` 表示输出被 max_tokens 截断，正文可能还没开始。
+fn is_truncated_by_token_limit(payload: &ParsedPayload) -> bool {
+    payload
+        .finish_reason
+        .as_deref()
+        .is_some_and(|reason| reason.eq_ignore_ascii_case("length"))
+}
+
+fn empty_content_error(truncated: bool, max_output_tokens: u64) -> String {
+    if truncated {
+        format!(
+            "LLM 输出因达到 max_tokens={max_output_tokens} 上限被截断，未产生可用正文（思考模式的推理 token 也计入该上限）；可关闭思考模式或降低思考强度后重试"
+        )
+    } else {
+        "LLM 响应结束但未包含可用正文".to_string()
+    }
 }
 
 fn emit_payload(
@@ -415,6 +451,7 @@ impl OpenAiClient {
         let url = self.base_url.clone();
         let http = self.http.clone();
         let api_key = self.api_key.clone();
+        let max_output_tokens = output_token_limit(self.enable_thinking);
 
         tokio::spawn(async move {
             if token.is_cancelled() {
@@ -534,6 +571,7 @@ impl OpenAiClient {
             }
 
             let mut full_content = String::new();
+            let mut truncated_by_limit = false;
             match format {
                 ResponseFormat::Json => {
                     let mut bytes = Vec::new();
@@ -581,7 +619,10 @@ impl OpenAiClient {
                         }
                     };
                     match parse_payload(&value) {
-                        Ok(Some(payload)) => emit_payload(payload, &mut full_content, &tx),
+                        Ok(Some(payload)) => {
+                            truncated_by_limit |= is_truncated_by_token_limit(&payload);
+                            emit_payload(payload, &mut full_content, &tx);
+                        }
                         Ok(None) => {
                             send_error(&tx, &api_key, "LLM JSON 响应不包含 choices[0] 内容");
                             return;
@@ -632,7 +673,10 @@ impl OpenAiClient {
                             }
                         };
                         match parse_payload(&value) {
-                            Ok(Some(payload)) => emit_payload(payload, &mut full_content, &tx),
+                            Ok(Some(payload)) => {
+                                truncated_by_limit |= is_truncated_by_token_limit(&payload);
+                                emit_payload(payload, &mut full_content, &tx);
+                            }
                             Ok(None) => {}
                             Err(error) => {
                                 send_error(&tx, &api_key, error);
@@ -647,7 +691,11 @@ impl OpenAiClient {
                 return;
             }
             if full_content.trim().is_empty() {
-                send_error(&tx, &api_key, "LLM 响应结束但未包含可用正文");
+                send_error(
+                    &tx,
+                    &api_key,
+                    empty_content_error(truncated_by_limit, max_output_tokens),
+                );
             } else {
                 let _ = tx.send(LlmChunk::Done(full_content));
             }
@@ -698,20 +746,40 @@ mod tests {
         ] {
             let body = build_request_body(ApiDialect::XAi, "grok-4.6", "question", true, saved);
             assert_eq!(body["reasoning_effort"], expected);
-            assert_eq!(body["max_completion_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
+            assert_eq!(body["max_completion_tokens"], MAX_THINKING_OUTPUT_TOKENS);
         }
 
         let disabled = build_request_body(ApiDialect::XAi, "grok-4.6", "question", false, "max");
         assert_eq!(disabled["reasoning_effort"], "low");
+        assert_eq!(disabled["max_completion_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
         assert!(disabled.get("enable_thinking").is_none());
         assert!(disabled.get("thinking").is_none());
+    }
+
+    #[test]
+    fn thinking_mode_reserves_tokens_for_reasoning_across_dialects() {
+        // 推理 token 与正文共享输出上限，思考时必须放宽，否则正文会被截断。
+        assert_eq!(output_token_limit(true), MAX_THINKING_OUTPUT_TOKENS);
+        assert_eq!(output_token_limit(false), MAX_VISIBLE_OUTPUT_TOKENS);
+
+        for dialect in [ApiDialect::OpenAi, ApiDialect::XAi, ApiDialect::Extended] {
+            let field = if dialect == ApiDialect::Extended {
+                "max_tokens"
+            } else {
+                "max_completion_tokens"
+            };
+            let thinking = build_request_body(dialect, "model", "question", true, "max");
+            assert_eq!(thinking[field], MAX_THINKING_OUTPUT_TOKENS);
+            let plain = build_request_body(dialect, "model", "question", false, "max");
+            assert_eq!(plain[field], MAX_VISIBLE_OUTPUT_TOKENS);
+        }
     }
 
     #[test]
     fn existing_dialects_keep_their_reasoning_fields_and_output_limit() {
         let openai = build_request_body(ApiDialect::OpenAi, "gpt-test", "question", true, "high");
         assert_eq!(openai["reasoning_effort"], "high");
-        assert_eq!(openai["max_completion_tokens"], MAX_VISIBLE_OUTPUT_TOKENS);
+        assert_eq!(openai["max_completion_tokens"], MAX_THINKING_OUTPUT_TOKENS);
         assert!(openai.get("max_tokens").is_none());
         assert!(openai.get("enable_thinking").is_none());
 
@@ -856,13 +924,14 @@ mod tests {
     #[test]
     fn parses_synchronous_message_content() {
         let value = serde_json::json!({
-            "choices": [{"message": {"content": "3"}}]
+            "choices": [{"message": {"content": "3"}, "finish_reason": "stop"}]
         });
         assert_eq!(
             parse_payload(&value),
             Ok(Some(ParsedPayload {
                 reasoning: None,
-                content: Some("3".to_string())
+                content: Some("3".to_string()),
+                finish_reason: Some("stop".to_string()),
             }))
         );
     }
@@ -882,9 +951,33 @@ mod tests {
             parse_payload(&value),
             Ok(Some(ParsedPayload {
                 reasoning: Some("分析".to_string()),
-                content: Some("答案是2".to_string())
+                content: Some("答案是2".to_string()),
+                finish_reason: None,
             }))
         );
+    }
+
+    #[test]
+    fn detects_truncated_output_and_explains_it() {
+        let truncated = serde_json::json!({
+            "choices": [{"delta": {}, "finish_reason": "length"}]
+        });
+        let payload = parse_payload(&truncated).unwrap().unwrap();
+        assert!(is_truncated_by_token_limit(&payload));
+
+        let stopped = serde_json::json!({
+            "choices": [{"delta": {"content": "2"}, "finish_reason": "stop"}]
+        });
+        let payload = parse_payload(&stopped).unwrap().unwrap();
+        assert!(!is_truncated_by_token_limit(&payload));
+
+        assert_eq!(
+            empty_content_error(false, MAX_VISIBLE_OUTPUT_TOKENS),
+            "LLM 响应结束但未包含可用正文"
+        );
+        let message = empty_content_error(true, MAX_THINKING_OUTPUT_TOKENS);
+        assert!(message.contains("被截断"));
+        assert!(message.contains(&MAX_THINKING_OUTPUT_TOKENS.to_string()));
     }
 
     #[test]
