@@ -4,7 +4,7 @@
         "provider_name": "硅基流动",
         "config": {
             "base_url": "https://api.siliconflow.cn/v1/chat/completions",
-            "model": "deepseek-ai/DeepSeek-V4-Flash"
+            "model": "deepseek-ai/DeepSeek-V4.1-Flash"
         }
     },
     {
@@ -12,7 +12,7 @@
         "provider_name": "DeepSeek",
         "config": {
             "base_url": "https://api.deepseek.com/v1/chat/completions",
-            "model": "deepseek-v4-flash"
+            "model": "deepseek-flash"
         }
     },
     {
@@ -20,7 +20,7 @@
         "provider_name": "智谱",
         "config": {
             "base_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-            "model": "glm-4.7"
+            "model": "glm-5.3"
         }
     },
     {
@@ -28,7 +28,7 @@
         "provider_name": "OpenAI",
         "config": {
             "base_url": "https://api.openai.com/v1/chat/completions",
-            "model": "gpt-5.4-nano"
+            "model": "gpt-6-luna"
         }
     },
     {
@@ -36,7 +36,7 @@
         "provider_name": "Grok (xAI)",
         "config": {
             "base_url": "https://api.x.ai/v1/chat/completions",
-            "model": "grok-4.6"
+            "model": "grok-4.7"
         }
     },
     {
